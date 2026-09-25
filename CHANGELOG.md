@@ -7,6 +7,7 @@
 
 ### Изменено
 
+- Образ macOS называется по архитектуре: `AudioSep-macos-arm64.dmg` или `AudioSep-macos-x86_64.dmg`. В GitHub Actions собираются оба.
 - Сборка в GitHub Actions запускается только при отправке git-тега.
 - В образе macOS каталог `models` лежит рядом с `AudioSep.app`. Приложение без аргументов читает модели оттуда.
 - Текст под галкой занимает свою высоту и не наезжает на соседние элементы.
@@ -21,7 +22,7 @@
 
 ### Добавлено
 
-- Сборка macOS: `uv run python bundle/build.py` создаёт `dist/AudioSep.dmg` с `AudioSep.app` и каталогом `models` рядом. В GitHub Actions экспорт ONNX выполняется один раз и передаётся сборкам пакетов; сборки разных ОС идут параллельно. Токенайзер в пакете читается из `Contents/Resources`.
+- Сборка macOS: `uv run python bundle/build.py` создаёт образ под архитектуру этой машины, `dist/AudioSep-macos-arm64.dmg` или `dist/AudioSep-macos-x86_64.dmg`, с `AudioSep.app` и каталогом `models` рядом. В GitHub Actions экспорт ONNX выполняется один раз и передаётся сборкам пакетов; сборки разных ОС и архитектур идут параллельно. Токенайзер в пакете читается из `Contents/Resources`.
 - Сборка Windows: та же команда на Windows создаёт `dist/AudioSep-windows.zip` с `AudioSep.exe` и каталогом `models` рядом. В GitHub Actions это отдельное задание на `windows-latest`, параллельно со сборкой macOS.
 - Сборка Linux: та же команда на Linux создаёт `dist/AudioSep-linux.zip` с исполняемым файлом `AudioSep` и каталогом `models` рядом. В GitHub Actions это отдельное задание на `ubuntu-latest`, параллельно с остальными сборками.
 - Стартовое окно приложения. Запуск: `uv run audiosep-app`.

@@ -1,11 +1,13 @@
 """Build the desktop app with PyInstaller.
 
-macOS becomes ``dist/AudioSep.dmg``. Windows becomes ``dist/AudioSep-windows.zip``.
+macOS becomes ``dist/AudioSep-macos-arm64.dmg`` or ``dist/AudioSep-macos-x86_64.dmg``.
+Windows becomes ``dist/AudioSep-windows.zip``.
 Linux becomes ``dist/AudioSep-linux.zip``.
 The same command is used locally and in GitHub Actions.
 ``build/`` is PyInstaller's work directory. The file there is not the app.
 """
 
+import platform
 import shutil
 import subprocess
 import sys
@@ -14,6 +16,21 @@ from pathlib import Path
 
 APP_NAME = "AudioSep"
 MODEL_FILES = ("separator.onnx", "clap_text.onnx")
+
+
+def macos_archive_name(machine: str | None = None) -> str:
+    """Disk image name for the CPU of the Python that runs the build.
+
+    One image is not a universal binary. Intel and Apple Silicon are built separately.
+    """
+    machine = (machine or platform.machine()).lower()
+    if machine in {"arm64", "aarch64"}:
+        arch = "arm64"
+    elif machine in {"x86_64", "amd64"}:
+        arch = "x86_64"
+    else:
+        raise SystemExit(f"Неизвестная архитектура macOS: {machine}")
+    return f"{APP_NAME}-macos-{arch}.dmg"
 
 
 def macos_executable_dir(dist: Path) -> Path:
@@ -115,7 +132,7 @@ def build_macos(root: Path) -> Path:
     executable_dir = macos_executable_dir(root / "dist")
     app = executable_dir.parent.parent
     assert_application(executable_dir / APP_NAME, app)
-    image = create_dmg(app, root / "dist" / f"{APP_NAME}.dmg", root / "local")
+    image = create_dmg(app, root / "dist" / macos_archive_name(), root / "local")
     print(f"Модели в образе: {', '.join(MODEL_FILES)}")
     print(image)
     return image

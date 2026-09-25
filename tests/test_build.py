@@ -4,7 +4,19 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from bundle.build import create_dmg, create_zip, place_models
+from bundle.build import create_dmg, create_zip, macos_archive_name, place_models
+
+
+def test_macos_archive_name_follows_the_cpu() -> None:
+    assert macos_archive_name("arm64") == "AudioSep-macos-arm64.dmg"
+    assert macos_archive_name("aarch64") == "AudioSep-macos-arm64.dmg"
+    assert macos_archive_name("x86_64") == "AudioSep-macos-x86_64.dmg"
+    assert macos_archive_name("amd64") == "AudioSep-macos-x86_64.dmg"
+
+
+def test_unknown_macos_cpu_is_refused() -> None:
+    with pytest.raises(SystemExit, match="ppc"):
+        macos_archive_name("ppc")
 
 
 def test_models_are_copied_into_the_image_directory(tmp_path: Path) -> None:

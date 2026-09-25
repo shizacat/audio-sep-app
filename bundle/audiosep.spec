@@ -1,7 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec for the desktop app.
 
-On macOS the bundle is dist/AudioSep.app and the delivered file is dist/AudioSep.dmg.
+On macOS the bundle is dist/AudioSep.app. The delivered file is
+dist/AudioSep-macos-arm64.dmg or dist/AudioSep-macos-x86_64.dmg.
 On Windows the delivered file is dist/AudioSep-windows.zip.
 On Linux the delivered file is dist/AudioSep-linux.zip.
 """

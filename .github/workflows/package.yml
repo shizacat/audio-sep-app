@@ -60,10 +60,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: macOS
+          - name: macOS arm64
             runner: macos-latest
-            artifact: AudioSep-macos
-            package: dist/AudioSep.dmg
+            artifact: AudioSep-macos-arm64
+            package: dist/AudioSep-macos-arm64.dmg
+          - name: macOS Intel
+            runner: macos-15-intel
+            artifact: AudioSep-macos-x86_64
+            package: dist/AudioSep-macos-x86_64.dmg
           - name: Windows
             runner: windows-latest
             artifact: AudioSep-windows
