@@ -18,6 +18,12 @@ from PySide6.QtWidgets import (
 from audiosep_app.formats import AUDIO_FILTER, AUDIO_SUFFIXES
 from audiosep_app.ui.worker import SeparationTask, SeparationWorker
 
+_REMOVE_HINT = (
+    "Отделённый звук всегда сохраняется рядом с исходником, к имени добавляется _separated. "
+    "Если галка включена, этот звук вычитается из исходной записи, "
+    "и рядом сохраняется второй файл с суффиксом _without."
+)
+
 
 class MainWindow(QMainWindow):
     def __init__(self, separate_audio: SeparationTask) -> None:
@@ -46,6 +52,8 @@ class MainWindow(QMainWindow):
         self._query.setFixedHeight(96)
 
         self._remove_from_original = QCheckBox("Убрать отделённый звук из оригинала")
+        self._remove_hint = QLabel(_REMOVE_HINT)
+        self._remove_hint.setWordWrap(True)
 
         self._separate_button = QPushButton("Отделить")
         self._separate_button.clicked.connect(self.separate)
@@ -67,6 +75,7 @@ class MainWindow(QMainWindow):
         form.addWidget(QLabel("Звук, который нужно отделить"))
         form.addWidget(self._query)
         form.addWidget(self._remove_from_original)
+        form.addWidget(self._remove_hint)
         form.addWidget(self._separate_button)
         form.addWidget(QLabel("Файлы результата"))
         form.addWidget(self._result_path)

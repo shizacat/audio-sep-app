@@ -8,6 +8,20 @@ from audiosep_app.ui.main_window import MainWindow
 from audiosep_app.ui.worker import SeparationTask
 
 
+def test_remove_checkbox_has_a_visible_explanation(qapp: QApplication) -> None:
+    window = MainWindow(_unused)
+
+    window.show()
+    qapp.processEvents()
+
+    hint = window._remove_hint.text()
+
+    assert window._remove_hint.isVisible()
+    assert "_separated" in hint
+    assert "_without" in hint
+    assert "вычитается" in hint
+
+
 def test_window_asks_for_an_audio_file(qapp: QApplication) -> None:
     window = MainWindow(_unused)
 
