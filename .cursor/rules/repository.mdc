@@ -7,6 +7,7 @@ alwaysApply: true
 
 - `src/audiosep_app/ui/` — виджеты PySide6.
 - `src/audiosep_app/separation/` — вызов AudioSep.
+- `src/audiosep_app/infer.py` — библиотека прогона ONNX-моделей, без командной строки и окна.
 - `tests/` — pytest, без скачивания весов.
 - `script/` — отдельный экспорт модели в ONNX, не код приложения.
 - `docs/development.md` — требования к разработке.
