@@ -1,0 +1,4 @@
+# Extra packages for this script. Install them into the AudioSplit environment.
+# That environment already provides PyTorch and AudioSep's libraries.
+onnx>=1.17
+onnxruntime>=1.20

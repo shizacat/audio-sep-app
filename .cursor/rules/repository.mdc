@@ -8,6 +8,7 @@ alwaysApply: true
 - `src/audiosep_app/ui/` — виджеты PySide6.
 - `src/audiosep_app/separation/` — вызов AudioSep.
 - `tests/` — pytest, без скачивания весов.
+- `script/` — отдельный экспорт модели в ONNX, не код приложения.
 - `docs/development.md` — требования к разработке.
 - `.cursor/rules/` — правила для агентов, одно правило на файл.
 - `.venv/` и `uv.lock` не коммитятся. `.python-version` коммитится. Зависимости объявлены в `pyproject.toml`.
