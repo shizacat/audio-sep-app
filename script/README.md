@@ -4,13 +4,17 @@
 
 Окружение — уже существующий клон AudioSplit рядом с этим репозиторием: `../AudioSplit/.venv`. Позже тот же путь будет у `git clone`. Сейчас клон заново не скачивается.
 
-Скрипт экспортирует сеть разделения ResUNet30: один фрагмент 5 секунд, 32 кГц. На вход волна и вектор условия, на выход волна. Текстовый кодировщик CLAP сюда не входит.
+Два скрипта:
+
+- `export_separator.py` — сеть разделения ResUNet30, один фрагмент 5 секунд, 32 кГц. На вход волна и вектор условия, на выход волна. Файл: `local/separator.onnx`.
+- `export_clap.py` — текстовая ветка CLAP. На вход токены RoBERTa длиной 512 и маска внимания, на выход нормализованный вектор условия. Токенайзер в файл не входит. Файл: `local/clap_text.onnx`.
 
 Из корня AudioSepApp:
 
 ```shell
 ../AudioSplit/.venv/bin/python -m pip install -r script/requirements.txt
 ../AudioSplit/.venv/bin/python script/export_separator.py
+../AudioSplit/.venv/bin/python script/export_clap.py
 ```
 
-Файл модели пишется в `local/separator.onnx` и в git не коммитится. Чекпоинт читается из `../AudioSplit/AudioSep/checkpoint/`.
+Файлы моделей в git не коммитятся. Чекпоинты читаются из `../AudioSplit/AudioSep/checkpoint/`.
