@@ -28,6 +28,18 @@ _REMOVE_HINT = (
 )
 
 
+def format_elapsed(seconds: float) -> str:
+    """Duration shown after a finished separation."""
+    if seconds < 60:
+        return f"{max(seconds, 0):.1f} с".replace(".", ",")
+    whole_seconds = int(seconds)
+    minutes, remainder = divmod(whole_seconds, 60)
+    if minutes < 60:
+        return f"{minutes} мин {remainder} с"
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours} ч {minutes} мин {remainder} с"
+
+
 class MainWindow(QMainWindow):
     def __init__(self, separate_audio: SeparationTask) -> None:
         super().__init__()
@@ -150,9 +162,9 @@ class MainWindow(QMainWindow):
         self._worker = worker
         worker.start()
 
-    def _on_separated(self, output_path: str) -> None:
+    def _on_separated(self, output_path: str, elapsed_seconds: float) -> None:
         self._result_path.setPlainText(output_path)
-        self._show_message("Результат сохранён.")
+        self._show_message(f"Результат сохранён за {format_elapsed(elapsed_seconds)}.")
 
     def _on_failed(self, message: str) -> None:
         self._show_message(message)

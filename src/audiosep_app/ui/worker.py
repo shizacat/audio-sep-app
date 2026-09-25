@@ -1,6 +1,7 @@
 """Background separation so the window stays responsive."""
 
 import logging
+import time
 from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SeparationWorker(QThread):
-    finished_ok = Signal(str)
+    finished_ok = Signal(str, float)
     failed = Signal(str)
 
     def __init__(
@@ -30,6 +31,7 @@ class SeparationWorker(QThread):
         self._remove_from_original = remove_from_original
 
     def run(self) -> None:
+        started = time.perf_counter()
         try:
             self._task(self._audio_path, self._query, self._remove_from_original)
         except SeparationError as exc:
@@ -44,4 +46,5 @@ class SeparationWorker(QThread):
                 self._remove_from_original,
             )
             saved = [separated_path] if residual_path is None else [separated_path, residual_path]
-            self.finished_ok.emit("\n".join(str(path) for path in saved))
+            elapsed = time.perf_counter() - started
+            self.finished_ok.emit("\n".join(str(path) for path in saved), elapsed)

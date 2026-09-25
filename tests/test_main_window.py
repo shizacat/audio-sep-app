@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from audiosep_app.formats import result_paths
 from audiosep_app.separation.errors import SeparationError
-from audiosep_app.ui.main_window import MainWindow
+from audiosep_app.ui.main_window import MainWindow, format_elapsed
 from audiosep_app.ui.worker import SeparationTask
 
 
@@ -89,7 +89,9 @@ def test_success_shows_result_path(qapp: QApplication, tmp_path: Path) -> None:
     qapp.processEvents()
 
     assert window._result_path.toPlainText() == str(separated)
-    assert window._message.text() == "Результат сохранён."
+    assert window._message.text().startswith("Результат сохранён за ")
+    assert window._message.text().endswith(".")
+    assert window.statusBar().currentMessage() == window._message.text()
     assert separated.read_bytes() == b"separated"
 
 
@@ -179,6 +181,13 @@ def test_checkbox_saves_both_files_with_suffixes(qapp: QApplication, tmp_path: P
     assert residual.name == "voice_without.wav"
     assert separated.read_bytes() == b"separated"
     assert residual.read_bytes() == b"without"
+
+
+def test_elapsed_time_uses_a_comma_and_larger_units() -> None:
+    assert format_elapsed(3.24) == "3,2 с"
+    assert format_elapsed(0) == "0,0 с"
+    assert format_elapsed(75) == "1 мин 15 с"
+    assert format_elapsed(3661) == "1 ч 1 мин 1 с"
 
 
 def _unused(audio_path: Path, query: str, remove_from_original: bool) -> None:
