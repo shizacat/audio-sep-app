@@ -126,3 +126,36 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.package }}
           if-no-files-found: error
+
+  release:
+    name: GitHub release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: AudioSep-*
+          merge-multiple: true
+          path: packages
+
+      - name: Publish packages as release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t files < <(find packages -type f | sort)
+          if [ "${#files[@]}" -ne 4 ]; then
+            echo "Expected 4 packages, found ${#files[@]}:"
+            printf '%s\n' "${files[@]}"
+            exit 1
+          fi
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${files[@]}" --clobber
+          else
+            gh release create "$tag" "${files[@]}" \
+              --title "$tag" \
+              --notes "Пакеты AudioSep для Linux, macOS (Apple Silicon и Intel) и Windows." \
+              --verify-tag
+          fi
