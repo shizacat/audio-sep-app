@@ -39,6 +39,24 @@ def load_audio(path: Path) -> np.ndarray:
     return waveform
 
 
+def subtract_extracted(mixture: np.ndarray, extracted: np.ndarray) -> np.ndarray:
+    """Return the mixture with the extracted waveform removed.
+
+    Both arrays are mono float samples at the same rate. The residual is scaled
+    only when its peak would clip.
+    """
+    mixture = np.asarray(mixture, dtype=np.float32).reshape(-1)
+    extracted = np.asarray(extracted, dtype=np.float32).reshape(-1)
+    length = min(mixture.size, extracted.size)
+    residual = mixture[:length] - extracted[:length]
+    if length == 0:
+        return residual
+    peak = float(np.max(np.abs(residual)))
+    if peak > 0.99:
+        residual = residual * np.float32(0.99 / peak)
+    return residual
+
+
 def save_audio(path: Path, waveform: np.ndarray) -> None:
     """Write ``waveform`` using the suffix of ``path``."""
     suffix = path.suffix.lower()

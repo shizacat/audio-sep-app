@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from audiosep_app.audio import AudioFormatError, load_audio, save_audio
+from audiosep_app.audio import AudioFormatError, load_audio, save_audio, subtract_extracted
 from audiosep_app.infer import SAMPLE_RATE
 
 
@@ -42,6 +42,19 @@ def test_unsupported_suffix_is_rejected(tmp_path) -> None:
     with pytest.raises(AudioFormatError) as read_error:
         load_audio(path)
     assert read_error.value.action == "read"
+
+
+def test_subtract_extracted_scales_only_when_the_peak_would_clip() -> None:
+    mixture = np.array([0.2, -0.4, 0.4], dtype=np.float32)
+    extracted = np.array([0.1, -0.2, 0.2], dtype=np.float32)
+
+    assert np.allclose(subtract_extracted(mixture, extracted), mixture * 0.5)
+
+    over = subtract_extracted(
+        np.array([1.0, -1.0], dtype=np.float32),
+        np.array([-0.5, 0.5], dtype=np.float32),
+    )
+    assert np.isclose(float(np.max(np.abs(over))), 0.99)
 
 
 def _tone(length: int) -> np.ndarray:

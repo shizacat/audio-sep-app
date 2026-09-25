@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from audiosep_app.audio import load_audio, save_audio
+from audiosep_app.formats import result_paths
 from audiosep_app.separation.errors import SeparationError
 from audiosep_app.separation.job import make_separation_task
 
@@ -14,7 +15,7 @@ def test_missing_model_is_reported(tmp_path: Path) -> None:
     task = make_separation_task(tmp_path / "separator.onnx", tmp_path / "clap_text.onnx")
 
     with pytest.raises(SeparationError, match="Не найдена модель"):
-        task(source, "a child speaking", tmp_path / "out.wav")
+        task(source, "a child speaking", False)
 
 
 def test_unreadable_audio_is_reported(tmp_path: Path) -> None:
@@ -23,7 +24,7 @@ def test_unreadable_audio_is_reported(tmp_path: Path) -> None:
     task = make_separation_task(tmp_path / "separator.onnx", tmp_path / "clap_text.onnx")
 
     with pytest.raises(SeparationError, match="Не удалось прочитать аудиофайл"):
-        task(source, "a child speaking", tmp_path / "out.wav")
+        task(source, "a child speaking", False)
 
 
 def test_runner_saves_separated_audio_and_loads_models_once(tmp_path: Path, monkeypatch) -> None:
@@ -41,11 +42,13 @@ def test_runner_saves_separated_audio_and_loads_models_once(tmp_path: Path, monk
     waveform = np.linspace(-0.4, 0.4, 3200, dtype=np.float32)
     source = tmp_path / "voice.wav"
     save_audio(source, waveform)
-    output = tmp_path / "voice_separated.wav"
+    separated_path, residual_path = result_paths(source, True)
     task = make_separation_task(tmp_path / "separator.onnx", tmp_path / "clap_text.onnx")
 
-    task(source, "a child speaking", output)
-    task(source, "a child speaking", output)
+    task(source, "a child speaking", True)
+    task(source, "a child speaking", True)
 
+    assert residual_path is not None
     assert created == [tmp_path / "separator.onnx"]
-    assert np.allclose(load_audio(output), waveform * 0.5, atol=1e-5)
+    assert np.allclose(load_audio(separated_path), waveform * 0.5, atol=1e-5)
+    assert np.allclose(load_audio(residual_path), waveform * 0.5, atol=1e-5)

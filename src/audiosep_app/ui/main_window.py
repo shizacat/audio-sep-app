@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -44,12 +45,15 @@ class MainWindow(QMainWindow):
         self._query.setPlaceholderText("Например, детский голос")
         self._query.setFixedHeight(96)
 
-        self._separate_button = QPushButton("Отделить…")
+        self._remove_from_original = QCheckBox("Убрать отделённый звук из оригинала")
+
+        self._separate_button = QPushButton("Отделить")
         self._separate_button.clicked.connect(self.separate)
 
-        self._result_path = QLineEdit()
+        self._result_path = QPlainTextEdit()
         self._result_path.setReadOnly(True)
         self._result_path.setPlaceholderText("Появится здесь после отделения")
+        self._result_path.setFixedHeight(64)
 
         self._message = QLabel()
         self._message.setWordWrap(True)
@@ -62,8 +66,9 @@ class MainWindow(QMainWindow):
         form.addLayout(audio_row)
         form.addWidget(QLabel("Звук, который нужно отделить"))
         form.addWidget(self._query)
+        form.addWidget(self._remove_from_original)
         form.addWidget(self._separate_button)
-        form.addWidget(QLabel("Файл результата"))
+        form.addWidget(QLabel("Файлы результата"))
         form.addWidget(self._result_path)
         form.addWidget(self._message)
         form.addStretch()
@@ -82,10 +87,7 @@ class MainWindow(QMainWindow):
             self._show_message("Укажите звук, который нужно отделить.")
             return
 
-        output_path = self._ask_output_path(audio_path)
-        if output_path is None:
-            return
-        self._start(audio_path, query, output_path)
+        self._start(audio_path, query, self._remove_from_original.isChecked())
 
     def _browse_audio(self) -> None:
         selected, _filter = QFileDialog.getOpenFileName(self, "Аудиофайл", "", AUDIO_FILTER)
@@ -93,26 +95,16 @@ class MainWindow(QMainWindow):
             self._audio_path.setText(selected)
             self._show_message("")
 
-    def _ask_output_path(self, audio_path: Path) -> Path | None:
-        suggested = audio_path.with_name(f"{audio_path.stem}_separated{audio_path.suffix}")
-        selected, _filter = QFileDialog.getSaveFileName(
-            self,
-            "Сохранить результат",
-            str(suggested),
-            AUDIO_FILTER,
-        )
-        if not selected:
-            return None
-        output_path = Path(selected)
-        if output_path.suffix.lower() not in AUDIO_SUFFIXES:
-            output_path = output_path.with_suffix(".wav")
-        return output_path
-
-    def _start(self, audio_path: Path, query: str, output_path: Path) -> None:
+    def _start(self, audio_path: Path, query: str, remove_from_original: bool) -> None:
         self._separate_button.setEnabled(False)
         self._result_path.clear()
         self._show_message("Отделение звука…")
-        worker = SeparationWorker(self._separate_audio, audio_path, query, output_path)
+        worker = SeparationWorker(
+            self._separate_audio,
+            audio_path,
+            query,
+            remove_from_original,
+        )
         worker.finished_ok.connect(self._on_separated)
         worker.failed.connect(self._on_failed)
         worker.finished.connect(self._on_worker_finished)
@@ -120,7 +112,7 @@ class MainWindow(QMainWindow):
         worker.start()
 
     def _on_separated(self, output_path: str) -> None:
-        self._result_path.setText(output_path)
+        self._result_path.setPlainText(output_path)
         self._show_message("Результат сохранён.")
 
     def _on_failed(self, message: str) -> None:

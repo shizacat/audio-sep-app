@@ -4,14 +4,15 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from audiosep_app.audio import AudioFormatError, load_audio, save_audio
+from audiosep_app.audio import AudioFormatError, load_audio, save_audio, subtract_extracted
+from audiosep_app.formats import result_paths
 from audiosep_app.infer import OnnxSeparator
 from audiosep_app.paths import resolved_model_paths
 from audiosep_app.separation.errors import SeparationError
 
 logger = logging.getLogger(__name__)
 
-SeparationTask = Callable[[Path, str, Path], None]
+SeparationTask = Callable[[Path, str, bool], None]
 
 _AUDIO_MESSAGES = {
     "read": "Не удалось прочитать аудиофайл.",
@@ -26,17 +27,21 @@ class SeparationRunner:
         self._separator_path, self._clap_path = resolved_model_paths(separator_path, clap_path)
         self._separator: OnnxSeparator | None = None
 
-    def __call__(self, audio_path: Path, query: str, output_path: Path) -> None:
+    def __call__(self, audio_path: Path, query: str, remove_from_original: bool) -> None:
+        separated_path, residual_path = result_paths(audio_path, remove_from_original)
         logger.info(
-            "Separation requested for %s with query %r -> %s",
+            "Separation requested for %s with query %r -> %s residual %s",
             audio_path,
             query,
-            output_path,
+            separated_path,
+            residual_path,
         )
         try:
             waveform = load_audio(audio_path)
             separated = self._engine().separate(waveform, query)
-            save_audio(output_path, separated)
+            save_audio(separated_path, separated)
+            if residual_path is not None:
+                save_audio(residual_path, subtract_extracted(waveform, separated))
         except FileNotFoundError as exc:
             raise SeparationError(f"Не найдена модель: {exc}") from exc
         except AudioFormatError as exc:
