@@ -134,6 +134,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: AudioSep-*
@@ -143,6 +145,7 @@ jobs:
       - name: Publish packages as release assets
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           mapfile -t files < <(find packages -type f | sort)
           if [ "${#files[@]}" -ne 4 ]; then
