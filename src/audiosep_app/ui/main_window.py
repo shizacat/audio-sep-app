@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -58,6 +60,15 @@ class MainWindow(QMainWindow):
         self._separate_button = QPushButton("Отделить")
         self._separate_button.clicked.connect(self.separate)
 
+        self._open_folder = QPushButton("Открыть папку")
+        self._open_folder.setEnabled(False)
+        self._open_folder.clicked.connect(self._open_result_folder)
+
+        result_row = QHBoxLayout()
+        result_row.addWidget(QLabel("Файлы результата"))
+        result_row.addStretch()
+        result_row.addWidget(self._open_folder)
+
         self._result_path = QPlainTextEdit()
         self._result_path.setReadOnly(True)
         self._result_path.setPlaceholderText("Появится здесь после отделения")
@@ -77,7 +88,7 @@ class MainWindow(QMainWindow):
         form.addWidget(self._remove_from_original)
         form.addWidget(self._remove_hint)
         form.addWidget(self._separate_button)
-        form.addWidget(QLabel("Файлы результата"))
+        form.addLayout(result_row)
         form.addWidget(self._result_path)
         form.addWidget(self._message)
         form.addStretch()
@@ -102,6 +113,7 @@ class MainWindow(QMainWindow):
         selected, _filter = QFileDialog.getOpenFileName(self, "Аудиофайл", "", AUDIO_FILTER)
         if selected:
             self._audio_path.setText(selected)
+            self._open_folder.setEnabled(True)
             self._show_message("")
 
     def _start(self, audio_path: Path, query: str, remove_from_original: bool) -> None:
@@ -139,8 +151,25 @@ class MainWindow(QMainWindow):
             self._query,
             self._remove_from_original,
             self._separate_button,
+            self._open_folder,
         ):
             widget.setEnabled(not busy)
+
+    def _open_result_folder(self) -> None:
+        folder = self._result_folder()
+        if folder is None:
+            self._show_message("Сначала укажите аудиофайл.")
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+
+    def _result_folder(self) -> Path | None:
+        saved = self._result_path.toPlainText().strip()
+        if saved:
+            return Path(saved.splitlines()[0]).parent
+        audio_path = Path(self._audio_path.text())
+        if self._is_audio_file(audio_path):
+            return audio_path.parent
+        return None
 
     def _show_message(self, text: str) -> None:
         self._message.setText(text)

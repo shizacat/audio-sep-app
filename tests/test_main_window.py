@@ -1,6 +1,7 @@
 import threading
 from pathlib import Path
 
+from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QApplication
 
 from audiosep_app.formats import result_paths
@@ -110,6 +111,7 @@ def test_inputs_are_blocked_until_separation_finishes(qapp: QApplication, tmp_pa
     assert not window._query.isEnabled()
     assert not window._remove_from_original.isEnabled()
     assert not window._separate_button.isEnabled()
+    assert not window._open_folder.isEnabled()
 
     release.set()
     assert window._worker is not None
@@ -120,6 +122,30 @@ def test_inputs_are_blocked_until_separation_finishes(qapp: QApplication, tmp_pa
     assert window._query.isEnabled()
     assert window._remove_from_original.isEnabled()
     assert window._separate_button.isEnabled()
+    assert window._open_folder.isEnabled()
+
+
+def test_open_folder_shows_the_result_directory(qapp: QApplication, tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "voice.wav"
+    source.write_bytes(b"")
+    opened: list[str] = []
+
+    def capture(url: QUrl) -> bool:
+        opened.append(url.toLocalFile())
+        return True
+
+    monkeypatch.setattr("audiosep_app.ui.main_window.QDesktopServices.openUrl", capture)
+    window = MainWindow(_unused)
+    window._audio_path.setText(str(source))
+    window._result_path.setPlainText(
+        f"{tmp_path / 'voice_separated.wav'}\n{tmp_path / 'voice_without.wav'}"
+    )
+    window._open_folder.setEnabled(True)
+
+    window._open_folder.click()
+    qapp.processEvents()
+
+    assert opened == [str(tmp_path)]
 
 
 def test_checkbox_saves_both_files_with_suffixes(qapp: QApplication, tmp_path: Path) -> None:
