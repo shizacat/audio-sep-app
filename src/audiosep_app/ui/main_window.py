@@ -40,12 +40,12 @@ class MainWindow(QMainWindow):
         self._audio_path = QLineEdit()
         self._audio_path.setReadOnly(True)
         self._audio_path.setPlaceholderText("Файл не выбран")
-        browse = QPushButton("Обзор…")
-        browse.clicked.connect(self._browse_audio)
+        self._browse = QPushButton("Обзор…")
+        self._browse.clicked.connect(self._browse_audio)
 
         audio_row = QHBoxLayout()
         audio_row.addWidget(self._audio_path)
-        audio_row.addWidget(browse)
+        audio_row.addWidget(self._browse)
 
         self._query = QPlainTextEdit()
         self._query.setPlaceholderText("Например, детский голос")
@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
             self._show_message("")
 
     def _start(self, audio_path: Path, query: str, remove_from_original: bool) -> None:
-        self._separate_button.setEnabled(False)
+        self._set_busy(True)
         self._result_path.clear()
         self._show_message("Отделение звука…")
         worker = SeparationWorker(
@@ -128,10 +128,19 @@ class MainWindow(QMainWindow):
         self._show_message(message)
 
     def _on_worker_finished(self) -> None:
-        self._separate_button.setEnabled(True)
+        self._set_busy(False)
         if self._worker is not None:
             self._worker.deleteLater()
             self._worker = None
+
+    def _set_busy(self, busy: bool) -> None:
+        for widget in (
+            self._browse,
+            self._query,
+            self._remove_from_original,
+            self._separate_button,
+        ):
+            widget.setEnabled(not busy)
 
     def _show_message(self, text: str) -> None:
         self._message.setText(text)

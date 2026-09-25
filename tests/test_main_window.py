@@ -1,3 +1,4 @@
+import threading
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
@@ -85,6 +86,40 @@ def test_success_shows_result_path(qapp: QApplication, tmp_path: Path) -> None:
     assert window._result_path.toPlainText() == str(separated)
     assert window._message.text() == "Результат сохранён."
     assert separated.read_bytes() == b"separated"
+
+
+def test_inputs_are_blocked_until_separation_finishes(qapp: QApplication, tmp_path: Path) -> None:
+    source = tmp_path / "voice.wav"
+    source.write_bytes(b"")
+    started = threading.Event()
+    release = threading.Event()
+
+    def block(audio_path: Path, query: str, remove_from_original: bool) -> None:
+        started.set()
+        assert release.wait(3)
+
+    window = MainWindow(block)
+    window._audio_path.setText(str(source))
+    window._query.setPlainText("речь")
+
+    window.separate()
+    assert started.wait(3)
+    qapp.processEvents()
+
+    assert not window._browse.isEnabled()
+    assert not window._query.isEnabled()
+    assert not window._remove_from_original.isEnabled()
+    assert not window._separate_button.isEnabled()
+
+    release.set()
+    assert window._worker is not None
+    assert window._worker.wait(3000)
+    qapp.processEvents()
+
+    assert window._browse.isEnabled()
+    assert window._query.isEnabled()
+    assert window._remove_from_original.isEnabled()
+    assert window._separate_button.isEnabled()
 
 
 def test_checkbox_saves_both_files_with_suffixes(qapp: QApplication, tmp_path: Path) -> None:
