@@ -64,6 +64,10 @@ jobs:
             runner: macos-latest
             artifact: AudioSep-macos
             package: dist/AudioSep.dmg
+          - name: Windows
+            runner: windows-latest
+            artifact: AudioSep-windows
+            package: dist/AudioSep-windows.zip
     steps:
       - uses: actions/checkout@v4
 

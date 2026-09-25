@@ -1,5 +1,6 @@
-"""Build the macOS app with PyInstaller and pack it into a disk image.
+"""Build the desktop app with PyInstaller.
 
+macOS becomes ``dist/AudioSep.dmg``. Windows becomes ``dist/AudioSep-windows.zip``.
 The same command is used locally and in GitHub Actions.
 ``build/`` is PyInstaller's work directory. The file there is not the app.
 """
@@ -19,6 +20,11 @@ def macos_executable_dir(dist: Path) -> Path:
     return dist / f"{APP_NAME}.app" / "Contents" / "MacOS"
 
 
+def windows_collect_dir(dist: Path) -> Path:
+    """Directory that contains AudioSep.exe and the collected runtime."""
+    return dist / APP_NAME
+
+
 def place_models(models_dir: Path, source_dir: Path) -> list[str]:
     """Copy ONNX files into ``models_dir``. Missing files are skipped."""
     models_dir.mkdir(parents=True, exist_ok=True)
@@ -31,23 +37,25 @@ def place_models(models_dir: Path, source_dir: Path) -> list[str]:
     return copied
 
 
-def assert_bundle(executable_dir: Path) -> None:
-    executable = executable_dir / APP_NAME
+def assert_application(executable: Path, search_root: Path) -> None:
     if not executable.is_file():
         raise SystemExit(f"Исполняемый файл не найден: {executable}")
-    tokenizer = list(executable_dir.parent.parent.rglob("tokenizer.json"))
-    if not tokenizer:
-        raise SystemExit(f"В пакете нет tokenizer.json: {executable_dir.parent.parent}")
+    if not list(search_root.rglob("tokenizer.json")):
+        raise SystemExit(f"В пакете нет tokenizer.json: {search_root}")
+
+
+def require_models(models_dir: Path) -> None:
+    missing = [name for name in MODEL_FILES if not (models_dir / name).is_file()]
+    if missing:
+        joined = ", ".join(missing)
+        raise SystemExit(f"В пакет нечего положить: нет {joined} в {models_dir}")
 
 
 def create_dmg(app: Path, destination: Path, models_dir: Path) -> Path:
     """Write a disk image with the app, ``models`` beside it, and a link to /Applications."""
     if not app.is_dir():
         raise SystemExit(f"Приложение не найдено: {app}")
-    missing = [name for name in MODEL_FILES if not (models_dir / name).is_file()]
-    if missing:
-        joined = ", ".join(missing)
-        raise SystemExit(f"В образ нечего положить: нет {joined} в {models_dir}")
+    require_models(models_dir)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="audiosep-dmg-") as raw_stage:
         stage = Path(raw_stage)
@@ -74,22 +82,60 @@ def create_dmg(app: Path, destination: Path, models_dir: Path) -> Path:
     return destination
 
 
-def build(root: Path) -> Path:
-    if sys.platform != "darwin":
-        raise SystemExit("Сборка пакета пока реализована только для macOS.")
+def create_zip(collect_dir: Path, destination: Path, models_dir: Path) -> Path:
+    """Zip the Windows folder with ``models`` next to ``AudioSep.exe``."""
+    if not collect_dir.is_dir():
+        raise SystemExit(f"Каталог приложения не найден: {collect_dir}")
+    require_models(models_dir)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    place_models(collect_dir / "models", models_dir)
+    if destination.exists():
+        destination.unlink()
+    archive = shutil.make_archive(
+        str(destination.with_suffix("")),
+        "zip",
+        root_dir=collect_dir.parent,
+        base_dir=collect_dir.name,
+    )
+    return Path(archive)
+
+
+def run_pyinstaller(root: Path) -> None:
     spec = root / "bundle" / "audiosep.spec"
     subprocess.run(
         [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", str(spec)],
         cwd=root,
         check=True,
     )
+
+
+def build_macos(root: Path) -> Path:
+    run_pyinstaller(root)
     executable_dir = macos_executable_dir(root / "dist")
-    assert_bundle(executable_dir)
     app = executable_dir.parent.parent
+    assert_application(executable_dir / APP_NAME, app)
     image = create_dmg(app, root / "dist" / f"{APP_NAME}.dmg", root / "local")
     print(f"Модели в образе: {', '.join(MODEL_FILES)}")
     print(image)
     return image
+
+
+def build_windows(root: Path) -> Path:
+    run_pyinstaller(root)
+    collect = windows_collect_dir(root / "dist")
+    assert_application(collect / f"{APP_NAME}.exe", collect)
+    archive = create_zip(collect, root / "dist" / f"{APP_NAME}-windows.zip", root / "local")
+    print(f"Модели в архиве: {', '.join(MODEL_FILES)}")
+    print(archive)
+    return archive
+
+
+def build(root: Path) -> Path:
+    if sys.platform == "darwin":
+        return build_macos(root)
+    if sys.platform == "win32":
+        return build_windows(root)
+    raise SystemExit("Сборка пакета пока реализована только для macOS и Windows.")
 
 
 def main() -> None:

@@ -1,9 +1,10 @@
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
-from bundle.build import create_dmg, place_models
+from bundle.build import create_dmg, create_zip, place_models
 
 
 def test_models_are_copied_into_the_image_directory(tmp_path: Path) -> None:
@@ -77,3 +78,33 @@ def test_dmg_contains_the_app_and_applications_link(tmp_path: Path) -> None:
         assert (mount / "Applications").readlink() == Path("/Applications")
     finally:
         subprocess.run(["hdiutil", "detach", str(mount)], check=True)
+
+
+def test_zip_without_models_is_refused(tmp_path: Path) -> None:
+    collect = tmp_path / "AudioSep"
+    collect.mkdir()
+
+    with pytest.raises(SystemExit, match="separator.onnx"):
+        create_zip(collect, tmp_path / "AudioSep-windows.zip", tmp_path / "local")
+
+
+def test_zip_contains_the_executable_and_models_beside_it(tmp_path: Path) -> None:
+    collect = tmp_path / "AudioSep"
+    internal = collect / "_internal"
+    internal.mkdir(parents=True)
+    (collect / "AudioSep.exe").write_bytes(b"exe")
+    (internal / "tokenizer.json").write_text("{}", encoding="utf-8")
+    models = tmp_path / "local"
+    models.mkdir()
+    (models / "separator.onnx").write_bytes(b"separator")
+    (models / "clap_text.onnx").write_bytes(b"clap")
+
+    archive = create_zip(collect, tmp_path / "out" / "AudioSep-windows.zip", models)
+
+    with zipfile.ZipFile(archive) as zipped:
+        names = {name.replace("\\", "/") for name in zipped.namelist()}
+        assert "AudioSep/AudioSep.exe" in names
+        assert zipped.read("AudioSep/models/separator.onnx") == b"separator"
+        assert zipped.read("AudioSep/models/clap_text.onnx") == b"clap"
+        assert "AudioSep/_internal/tokenizer.json" in names
+    assert not (collect / "_internal" / "models").exists()
