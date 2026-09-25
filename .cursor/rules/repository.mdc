@@ -1,0 +1,19 @@
+---
+description: Куда класть код, тесты, конфиг и веса модели
+alwaysApply: true
+---
+
+# Структура
+
+- `src/audiosep_app/ui/` — виджеты PySide6.
+- `src/audiosep_app/separation/` — вызов AudioSep.
+- `tests/` — pytest, без скачивания весов.
+- `docs/development.md` — требования к разработке.
+- `.cursor/rules/` — правила для агентов, одно правило на файл.
+- `contribute/config.example.toml` — образец. Рабочий `config.toml` в корне не коммитится.
+
+Веса `.ckpt`, каталог `checkpoint/` и записи из `local/` в git не попадают.
+
+Структура репозитория описана здесь. README её не повторяет.
+
+Новый каталог верхнего уровня сопровождается правкой этого правила, `docs/development.md` и changelog.

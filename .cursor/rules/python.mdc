@@ -1,0 +1,20 @@
+---
+description: Стиль Python и границы импортов между пакетами
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python
+
+Python 3.12+. Публичные функции с аннотациями типов. Зависимости объявляются в `pyproject.toml`.
+
+Версия пакета — `__version__` в `src/audiosep_app/__init__.py`. В `pyproject.toml` поле `version` динамическое и читается оттуда.
+
+Пакет `ui` не импортирует torch и AudioSep. Пакет `separation` не импортирует PySide6.
+
+```python
+def separate(audio_path: Path, query: str, output_path: Path) -> None:
+    ...
+```
+
+Тест лежит в `tests/` и подменяет адаптер разделения. Проверка: `ruff check src tests`, затем `pytest`.

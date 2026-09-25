@@ -1,0 +1,18 @@
+---
+description: Интерфейс PySide6 запускает разделение в фоне
+globs: src/audiosep_app/ui/**/*.py
+alwaysApply: false
+---
+
+# Qt
+
+Только PySide6. Кнопка запускает worker (`QThread` или `QRunnable`). Виджет получает результат сигналом.
+
+```python
+worker.finished_ok.connect(self._on_separated)
+worker.start()
+```
+
+`separate_audio` вызывается внутри worker. Слот кнопки остаётся коротким, окно отвечает на действия во время разделения.
+
+Текст ошибки показывается в окне. Трассировка пишется в лог.
