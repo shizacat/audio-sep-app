@@ -1,6 +1,2 @@
 # Скопируйте в config.toml в корне репозитория. config.toml в git не коммитится.
-
-audiosep_root = "../AudioSplit/AudioSep"
-checkpoint = ""
-config_yaml = ""
-device = "auto"
+# Путей и окружений вне этого репозитория здесь нет.

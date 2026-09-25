@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Qt
 
-Только PySide6. Кнопка запускает worker (`QThread` или `QRunnable`). Виджет получает результат сигналом.
+Интерфейс на Qt 6, биндинг — PySide6. Кнопка запускает worker (`QThread` или `QRunnable`). Виджет получает результат сигналом.
 
 ```python
 worker.finished_ok.connect(self._on_separated)

@@ -1,1 +1,1 @@
-"""Adapter around an external AudioSep checkout."""
+"""Sound-separation adapter. AudioSep is not wired to a directory outside this repository."""

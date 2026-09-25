@@ -17,4 +17,4 @@ def separate(audio_path: Path, query: str, output_path: Path) -> None:
     ...
 ```
 
-Тест лежит в `tests/` и подменяет адаптер разделения. Проверка: `ruff check src tests`, затем `pytest`.
+Тест лежит в `tests/` и подменяет адаптер разделения. Проверка: `uv run ruff check src tests`, затем `uv run pytest`.

@@ -1,0 +1,19 @@
+---
+description: Окружение uv и сборка пакета PyInstaller
+alwaysApply: true
+---
+
+# Окружение и пакет
+
+Зависимости ставит uv. Окружение — `.venv`, Python 3.12 из `.python-version`.
+
+```shell
+uv sync
+uv run pytest
+```
+
+Новая зависимость приложения добавляется в `[project.dependencies]` через `uv add`. Инструмент проверки или сборки — в группу `dev` через `uv add --group dev`. Список зависимостей — только `pyproject.toml`. `uv.lock` не коммитится.
+
+Пакет для пользователя собирает PyInstaller, отдельно на Linux, macOS и Windows. Сборка включает приложение на Qt 6. В пакет входят интерпретатор и `[project.dependencies]`. Группа `dev` в пакет не входит.
+
+Окружение одно — `.venv` этого репозитория.
