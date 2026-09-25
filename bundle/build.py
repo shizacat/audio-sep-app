@@ -1,6 +1,7 @@
 """Build the desktop app with PyInstaller.
 
 macOS becomes ``dist/AudioSep.dmg``. Windows becomes ``dist/AudioSep-windows.zip``.
+Linux becomes ``dist/AudioSep-linux.zip``.
 The same command is used locally and in GitHub Actions.
 ``build/`` is PyInstaller's work directory. The file there is not the app.
 """
@@ -20,8 +21,8 @@ def macos_executable_dir(dist: Path) -> Path:
     return dist / f"{APP_NAME}.app" / "Contents" / "MacOS"
 
 
-def windows_collect_dir(dist: Path) -> Path:
-    """Directory that contains AudioSep.exe and the collected runtime."""
+def collect_dir(dist: Path) -> Path:
+    """Directory that contains the frozen executable and the collected runtime."""
     return dist / APP_NAME
 
 
@@ -82,20 +83,20 @@ def create_dmg(app: Path, destination: Path, models_dir: Path) -> Path:
     return destination
 
 
-def create_zip(collect_dir: Path, destination: Path, models_dir: Path) -> Path:
-    """Zip the Windows folder with ``models`` next to ``AudioSep.exe``."""
-    if not collect_dir.is_dir():
-        raise SystemExit(f"Каталог приложения не найден: {collect_dir}")
+def create_zip(collected: Path, destination: Path, models_dir: Path) -> Path:
+    """Zip a folder with ``models`` next to the executable."""
+    if not collected.is_dir():
+        raise SystemExit(f"Каталог приложения не найден: {collected}")
     require_models(models_dir)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    place_models(collect_dir / "models", models_dir)
+    place_models(collected / "models", models_dir)
     if destination.exists():
         destination.unlink()
     archive = shutil.make_archive(
         str(destination.with_suffix("")),
         "zip",
-        root_dir=collect_dir.parent,
-        base_dir=collect_dir.name,
+        root_dir=collected.parent,
+        base_dir=collected.name,
     )
     return Path(archive)
 
@@ -120,14 +121,22 @@ def build_macos(root: Path) -> Path:
     return image
 
 
-def build_windows(root: Path) -> Path:
+def build_directory(root: Path, executable_name: str, archive_name: str) -> Path:
     run_pyinstaller(root)
-    collect = windows_collect_dir(root / "dist")
-    assert_application(collect / f"{APP_NAME}.exe", collect)
-    archive = create_zip(collect, root / "dist" / f"{APP_NAME}-windows.zip", root / "local")
+    collected = collect_dir(root / "dist")
+    assert_application(collected / executable_name, collected)
+    archive = create_zip(collected, root / "dist" / archive_name, root / "local")
     print(f"Модели в архиве: {', '.join(MODEL_FILES)}")
     print(archive)
     return archive
+
+
+def build_windows(root: Path) -> Path:
+    return build_directory(root, f"{APP_NAME}.exe", f"{APP_NAME}-windows.zip")
+
+
+def build_linux(root: Path) -> Path:
+    return build_directory(root, APP_NAME, f"{APP_NAME}-linux.zip")
 
 
 def build(root: Path) -> Path:
@@ -135,7 +144,9 @@ def build(root: Path) -> Path:
         return build_macos(root)
     if sys.platform == "win32":
         return build_windows(root)
-    raise SystemExit("Сборка пакета пока реализована только для macOS и Windows.")
+    if sys.platform == "linux":
+        return build_linux(root)
+    raise SystemExit("Сборка пакета реализована для Linux, macOS и Windows.")
 
 
 def main() -> None:

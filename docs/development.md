@@ -41,9 +41,9 @@ uv run audiosep-app --separator /path/separator.onnx --clap /path/clap_text.onnx
 
 Готовое приложение — каталог, собранный PyInstaller. PyInstaller собирает приложение на Qt 6. Внутри свой интерпретатор и зависимости из `[project.dependencies]`. Отдельный Python на машине пользователя не нужен. Сборка выполняется на целевой ОС. Группа `dev` в пакет не входит.
 
-Собираются macOS и Windows. Та же команда запускается локально на целевой ОС и в GitHub Actions (`.github/workflows/package.yml`). На macOS результат — `dist/AudioSep.dmg`: рядом лежат `AudioSep.app`, каталог `models` и ссылка на «Программы». На Windows результат — `dist/AudioSep-windows.zip`: внутри каталог `AudioSep` с `AudioSep.exe` и `models` рядом. Каталог `build/` — рабочий каталог PyInstaller, файл `build/audiosep/AudioSep` приложением не является.
+Собираются Linux, macOS и Windows. Та же команда запускается локально на целевой ОС и в GitHub Actions (`.github/workflows/package.yml`). На macOS результат — `dist/AudioSep.dmg`: рядом лежат `AudioSep.app`, каталог `models` и ссылка на «Программы». На Windows результат — `dist/AudioSep-windows.zip`: внутри каталог `AudioSep` с `AudioSep.exe` и `models` рядом. На Linux результат — `dist/AudioSep-linux.zip`: внутри каталог `AudioSep` с исполняемым файлом `AudioSep` и `models` рядом. Каталог `build/` — рабочий каталог PyInstaller, файл `build/audiosep/AudioSep` приложением не является.
 
-Workflow запускается только при отправке git-тега. Экспорт ONNX — одно задание `onnx` на `ubuntu-latest`. Оно скачивает чекпоинты, запускает скрипты из `script/` и передаёт `separator.onnx` и `clap_text.onnx` артефактом `onnx-models`. Сборки macOS и Windows зависят от этого задания и идут параллельно. Linux добавляется в ту же матрицу и экспорт не повторяет.
+Workflow запускается только при отправке git-тега. Экспорт ONNX — одно задание `onnx` на `ubuntu-latest`. Оно скачивает чекпоинты, запускает скрипты из `script/` и передаёт `separator.onnx` и `clap_text.onnx` артефактом `onnx-models`. Сборки Linux, macOS и Windows зависят от этого задания и идут параллельно. Экспорт при этом не повторяется.
 
 Из корня репозитория, после `uv sync`:
 
@@ -57,7 +57,7 @@ uv run python bundle/build.py
 open dist/AudioSep.dmg
 ```
 
-В окне образа macOS рядом лежат `AudioSep.app` и каталог `models`. Приложение без аргументов читает модели из этого каталога, поэтому их оставляют в одной папке с приложением. Запуск из образа: двойной щелчок по `AudioSep.app`. На Windows архив распаковывают и запускают `AudioSep.exe`; каталог `models` уже лежит рядом. Другие модели задаются аргументами `--separator` и `--clap`.
+В окне образа macOS рядом лежат `AudioSep.app` и каталог `models`. Приложение без аргументов читает модели из этого каталога, поэтому их оставляют в одной папке с приложением. Запуск из образа: двойной щелчок по `AudioSep.app`. На Windows архив распаковывают и запускают `AudioSep.exe`. На Linux архив распаковывают и запускают `AudioSep`. В обоих архивах каталог `models` уже лежит рядом. Другие модели задаются аргументами `--separator` и `--clap`.
 
 Пакет не подписан. macOS может спросить подтверждение при первом открытии скачанного архива. Windows может показать предупреждение SmartScreen.
 
@@ -75,7 +75,7 @@ open dist/AudioSep.dmg
 
 При разработке файлы `separator.onnx` и `clap_text.onnx` лежат в каталоге `local/` в корне репозитория. Этот каталог в git не входит.
 
-У собранного приложения macOS те же файлы лежат в каталоге `models` рядом с `AudioSep.app`, в том же каталоге, что и само приложение. У собранного приложения Windows они лежат в каталоге `models` рядом с `AudioSep.exe`. В обоих случаях это не временный каталог сборки.
+У собранного приложения macOS те же файлы лежат в каталоге `models` рядом с `AudioSep.app`, в том же каталоге, что и само приложение. У собранного приложения Windows они лежат в каталоге `models` рядом с `AudioSep.exe`, у Linux — рядом с исполняемым файлом `AudioSep`. Это не временный каталог сборки.
 
 Другой путь задаётся аргументами `--separator` и `--clap`. Каждый аргумент можно передать отдельно: второй файл остаётся по умолчанию. Перед открытием окна приложение проверяет, что файлы есть. Если файла нет, показывается стандартное окно ошибки, и после OK приложение закрывается. Сами модели загружаются при первом отделении.
 
@@ -133,4 +133,4 @@ uv run pytest
 3. Адаптер AudioSep в фоновом потоке.
 4. Сценарий: файл, текстовый запрос, запуск, сохранение аудиофайла.
 5. Длинные записи, прогресс и текст ошибок.
-6. Сборка пакета PyInstaller. macOS собирается в `dist/AudioSep.dmg`, Windows — в `dist/AudioSep-windows.zip`, локально и в GitHub Actions. Linux — следом.
+6. Сборка пакета PyInstaller. macOS собирается в `dist/AudioSep.dmg`, Windows — в `dist/AudioSep-windows.zip`, Linux — в `dist/AudioSep-linux.zip`, локально и в GitHub Actions.

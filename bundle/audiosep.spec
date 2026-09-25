@@ -2,7 +2,8 @@
 """PyInstaller spec for the desktop app.
 
 On macOS the bundle is dist/AudioSep.app and the delivered file is dist/AudioSep.dmg.
-On Windows the folder is dist/AudioSep and the delivered file is dist/AudioSep-windows.zip.
+On Windows the delivered file is dist/AudioSep-windows.zip.
+On Linux the delivered file is dist/AudioSep-linux.zip.
 """
 
 import sys

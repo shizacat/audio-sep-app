@@ -108,3 +108,21 @@ def test_zip_contains_the_executable_and_models_beside_it(tmp_path: Path) -> Non
         assert zipped.read("AudioSep/models/clap_text.onnx") == b"clap"
         assert "AudioSep/_internal/tokenizer.json" in names
     assert not (collect / "_internal" / "models").exists()
+
+
+def test_linux_zip_keeps_the_executable_name(tmp_path: Path) -> None:
+    collect = tmp_path / "AudioSep"
+    collect.mkdir()
+    (collect / "AudioSep").write_bytes(b"elf")
+    models = tmp_path / "local"
+    models.mkdir()
+    (models / "separator.onnx").write_bytes(b"separator")
+    (models / "clap_text.onnx").write_bytes(b"clap")
+
+    archive = create_zip(collect, tmp_path / "AudioSep-linux.zip", models)
+
+    with zipfile.ZipFile(archive) as zipped:
+        names = {name.replace("\\", "/") for name in zipped.namelist()}
+        assert "AudioSep/AudioSep" in names
+        assert "AudioSep/models/separator.onnx" in names
+        assert "AudioSep/models/clap_text.onnx" in names
