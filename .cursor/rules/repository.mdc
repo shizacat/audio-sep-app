@@ -1,5 +1,5 @@
 ---
-description: Куда класть код, тесты, конфиг и веса модели
+description: Куда класть код, тесты и веса модели
 alwaysApply: true
 ---
 
@@ -10,8 +10,9 @@ alwaysApply: true
 - `tests/` — pytest, без скачивания весов.
 - `docs/development.md` — требования к разработке.
 - `.cursor/rules/` — правила для агентов, одно правило на файл.
-- `contribute/config.example.toml` — образец. Рабочий `config.toml` в корне не коммитится.
 - `.venv/` и `uv.lock` не коммитятся. `.python-version` коммитится. Зависимости объявлены в `pyproject.toml`.
+
+Файл настроек приложения пока не выбран. Код его не читает.
 
 Веса `.ckpt`, каталог `checkpoint/` и записи из `local/` в git не попадают.
 
