@@ -70,15 +70,20 @@ def require_models(models_dir: Path) -> None:
 
 
 def create_dmg(app: Path, destination: Path, models_dir: Path) -> Path:
-    """Write a disk image with the app, ``models`` beside it, and a link to /Applications."""
+    """Write a disk image with the app and a link to /Applications.
+
+    Models go inside the ``.app``, next to the executable. A sibling ``models``
+    folder is left behind when macOS translocates the bundle.
+    """
     if not app.is_dir():
         raise SystemExit(f"Приложение не найдено: {app}")
     require_models(models_dir)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="audiosep-dmg-") as raw_stage:
         stage = Path(raw_stage)
-        subprocess.run(["ditto", str(app), str(stage / app.name)], check=True)
-        place_models(stage / "models", models_dir)
+        staged_app = stage / app.name
+        subprocess.run(["ditto", str(app), str(staged_app)], check=True)
+        place_models(staged_app / "Contents" / "MacOS" / "models", models_dir)
         (stage / "Applications").symlink_to("/Applications")
         if destination.exists():
             destination.unlink()

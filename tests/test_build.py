@@ -83,9 +83,10 @@ def test_dmg_contains_the_app_and_applications_link(tmp_path: Path) -> None:
     try:
         bundled = mount / "AudioSep.app" / "Contents" / "MacOS" / "AudioSep"
         assert bundled.read_text(encoding="utf-8") == "bin"
-        assert not (mount / "AudioSep.app" / "Contents" / "MacOS" / "models").exists()
-        assert (mount / "models" / "separator.onnx").read_bytes() == b"separator"
-        assert (mount / "models" / "clap_text.onnx").read_bytes() == b"clap"
+        assert not (mount / "models").exists()
+        macos_models = mount / "AudioSep.app" / "Contents" / "MacOS" / "models"
+        assert (macos_models / "separator.onnx").read_bytes() == b"separator"
+        assert (macos_models / "clap_text.onnx").read_bytes() == b"clap"
         assert (mount / "Applications").is_symlink()
         assert (mount / "Applications").readlink() == Path("/Applications")
     finally:
