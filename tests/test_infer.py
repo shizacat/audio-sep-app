@@ -1,7 +1,16 @@
+import sys
+from pathlib import Path
+
 import numpy as np
 from tokenizers import Tokenizer
 
-from audiosep_app.infer import CHUNK_SAMPLES, TEXT_LENGTH, TOKENIZER_PATH, separate_chunks
+from audiosep_app.infer import (
+    CHUNK_SAMPLES,
+    TEXT_LENGTH,
+    TOKENIZER_PATH,
+    separate_chunks,
+    tokenizer_path,
+)
 
 
 def test_short_waveform_is_unchanged_by_identity() -> None:
@@ -21,6 +30,20 @@ def test_long_waveform_is_reconstructed_by_identity() -> None:
 
         assert separated.shape == waveform.shape
         assert np.allclose(separated, waveform), length
+
+
+def test_frozen_macos_tokenizer_is_read_from_resources(tmp_path: Path, monkeypatch) -> None:
+    frameworks = tmp_path / "Contents" / "Frameworks"
+    tokenizer = tmp_path / "Contents" / "Resources" / "audiosep_app" / "assets" / "tokenizer.json"
+    tokenizer.parent.mkdir(parents=True)
+    tokenizer.write_text("{}", encoding="utf-8")
+    frameworks.mkdir()
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(frameworks), raising=False)
+
+    found = tokenizer_path(frameworks / "audiosep_app" / "infer.py")
+
+    assert found == tokenizer
 
 
 def test_bundled_tokenizer_pads_to_the_model_length() -> None:

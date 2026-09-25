@@ -1,0 +1,89 @@
+name: Package
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  onnx:
+    name: ONNX models
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Audio-AGI/AudioSep
+          path: vendor/AudioSep
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install export dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.5.1 torchaudio==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r script/requirements-ci.txt
+
+      - name: Export the separator
+        run: |
+          mkdir -p vendor/AudioSep/checkpoint
+          curl -L --fail --output vendor/AudioSep/checkpoint/audiosep_base_4M_steps.ckpt \
+            https://huggingface.co/spaces/Audio-AGI/AudioSep/resolve/main/checkpoint/audiosep_base_4M_steps.ckpt
+          python script/export_separator.py --audiosep-root vendor/AudioSep
+          rm vendor/AudioSep/checkpoint/audiosep_base_4M_steps.ckpt
+
+      - name: Export the text encoder
+        run: |
+          curl -L --fail --output vendor/AudioSep/checkpoint/music_speech_audioset_epoch_15_esc_89.98.pt \
+            https://huggingface.co/spaces/Audio-AGI/AudioSep/resolve/main/checkpoint/music_speech_audioset_epoch_15_esc_89.98.pt
+          python script/export_clap.py --audiosep-root vendor/AudioSep
+
+      - name: Collect the models
+        run: |
+          mkdir -p onnx-models
+          cp local/separator.onnx local/clap_text.onnx onnx-models/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onnx-models
+          path: onnx-models/
+          if-no-files-found: error
+
+  package:
+    name: ${{ matrix.name }}
+    needs: onnx
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            runner: macos-latest
+            artifact: AudioSep-macos
+            package: dist/AudioSep.dmg
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: onnx-models
+          path: local
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build the package
+        run: uv run python bundle/build.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.package }}
+          if-no-files-found: error

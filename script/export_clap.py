@@ -51,9 +51,25 @@ def allow_checkpoint_load() -> None:
     torch.load = load_checkpoint
 
 
+def drop_unused_position_ids() -> None:
+    """Ignore a RoBERTa buffer that current transformers no longer creates."""
+    from models.CLAP.open_clip import factory
+
+    original = factory.load_state_dict
+
+    def load_state_dict(checkpoint_path, map_location="cpu", skip_params=True):
+        state = original(checkpoint_path, map_location=map_location, skip_params=skip_params)
+        if isinstance(state, dict):
+            state.pop("text_branch.embeddings.position_ids", None)
+        return state
+
+    factory.load_state_dict = load_state_dict
+
+
 def load_text_encoder(audiosep_root: Path, checkpoint: Path) -> nn.Module:
     sys.path.insert(0, str(audiosep_root))
     allow_checkpoint_load()
+    drop_unused_position_ids()
     from models.clap_encoder import CLAP_Encoder
 
     encoder = CLAP_Encoder(pretrained_path=str(checkpoint))

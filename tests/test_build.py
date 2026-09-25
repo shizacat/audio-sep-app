@@ -1,0 +1,79 @@
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+from bundle.build import create_dmg, place_models
+
+
+def test_models_are_copied_into_the_image_directory(tmp_path: Path) -> None:
+    models = tmp_path / "models"
+    local = tmp_path / "local"
+    local.mkdir()
+    (local / "separator.onnx").write_bytes(b"separator")
+    (local / "clap_text.onnx").write_bytes(b"clap")
+    (local / "other.bin").write_bytes(b"skip")
+
+    copied = place_models(models, local)
+
+    assert copied == ["separator.onnx", "clap_text.onnx"]
+    assert (models / "separator.onnx").read_bytes() == b"separator"
+    assert (models / "clap_text.onnx").read_bytes() == b"clap"
+    assert not (models / "other.bin").exists()
+
+
+def test_missing_models_still_create_the_directory(tmp_path: Path) -> None:
+    models = tmp_path / "models"
+
+    copied = place_models(models, tmp_path / "local")
+
+    assert copied == []
+    assert models.is_dir()
+
+
+def test_dmg_without_models_is_refused(tmp_path: Path) -> None:
+    app = tmp_path / "AudioSep.app"
+    app.mkdir()
+
+    with pytest.raises(SystemExit, match="separator.onnx"):
+        create_dmg(app, tmp_path / "AudioSep.dmg", tmp_path / "local")
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="DMG is built on macOS")
+def test_dmg_contains_the_app_and_applications_link(tmp_path: Path) -> None:
+    app = tmp_path / "AudioSep.app"
+    macos = app / "Contents" / "MacOS"
+    macos.mkdir(parents=True)
+    (macos / "AudioSep").write_text("bin", encoding="utf-8")
+    models = tmp_path / "local"
+    models.mkdir()
+    (models / "separator.onnx").write_bytes(b"separator")
+    (models / "clap_text.onnx").write_bytes(b"clap")
+    image = tmp_path / "AudioSep.dmg"
+    mount = tmp_path / "mount"
+    mount.mkdir()
+
+    create_dmg(app, image, models)
+
+    subprocess.run(
+        [
+            "hdiutil",
+            "attach",
+            "-nobrowse",
+            "-readonly",
+            "-mountpoint",
+            str(mount),
+            str(image),
+        ],
+        check=True,
+    )
+    try:
+        bundled = mount / "AudioSep.app" / "Contents" / "MacOS" / "AudioSep"
+        assert bundled.read_text(encoding="utf-8") == "bin"
+        assert not (mount / "AudioSep.app" / "Contents" / "MacOS" / "models").exists()
+        assert (mount / "models" / "separator.onnx").read_bytes() == b"separator"
+        assert (mount / "models" / "clap_text.onnx").read_bytes() == b"clap"
+        assert (mount / "Applications").is_symlink()
+        assert (mount / "Applications").readlink() == Path("/Applications")
+    finally:
+        subprocess.run(["hdiutil", "detach", str(mount)], check=True)

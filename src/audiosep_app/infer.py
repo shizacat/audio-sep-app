@@ -4,6 +4,7 @@ Load the models once and call ``OnnxSeparator.separate``. The module does not
 read command-line arguments and does not open a window.
 """
 
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -15,7 +16,25 @@ LEFT_SAMPLES = 32_000
 HOP_SAMPLES = 96_000
 RIGHT_SAMPLES = 32_000
 TEXT_LENGTH = 512
-TOKENIZER_PATH = Path(__file__).resolve().parent / "assets" / "tokenizer.json"
+def tokenizer_path(module_file: Path | None = None) -> Path:
+    """Path to the bundled RoBERTa tokenizer.
+
+    A macOS app keeps data files in Contents/Resources, while ``sys._MEIPASS``
+    points at Contents/Frameworks.
+    """
+    beside_module = Path(module_file or __file__).resolve().parent / "assets" / "tokenizer.json"
+    if beside_module.is_file():
+        return beside_module
+    if getattr(sys, "frozen", False):
+        meipass = Path(sys._MEIPASS)
+        relative = Path("audiosep_app") / "assets" / "tokenizer.json"
+        for candidate in (meipass / relative, meipass.parent / "Resources" / relative):
+            if candidate.is_file():
+                return candidate
+    return beside_module
+
+
+TOKENIZER_PATH = tokenizer_path()
 _PAD_TOKEN_ID = 1
 
 

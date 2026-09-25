@@ -1,0 +1,23 @@
+# Packages for a clean CI environment that exports ONNX.
+# torch, torchaudio and torchvision are installed first from the CPU wheel index.
+lightning>=2.1,<2.6
+transformers>=4.30,<5
+torchlibrosa==0.1.0
+librosa>=0.10
+soundfile>=0.12
+numpy
+scipy
+PyYAML
+ftfy
+regex
+tqdm
+huggingface-hub>=0.23,<1
+wget
+h5py
+braceexpand
+webdataset
+pandas
+Pillow
+scikit-learn
+onnx>=1.17
+onnxruntime>=1.20

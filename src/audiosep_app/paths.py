@@ -9,10 +9,26 @@ PACKAGED_MODEL_DIRNAME = "models"
 DEV_MODEL_DIRNAME = "local"
 
 
+def packaged_model_directory(executable: Path) -> Path:
+    """Directory of ONNX files shipped beside a frozen application.
+
+    A macOS disk image keeps ``models`` next to the ``.app``, not inside
+    ``Contents/MacOS``. Other packages keep it next to the executable.
+    """
+    resolved = executable.resolve()
+    if (
+        resolved.parent.name == "MacOS"
+        and resolved.parents[1].name == "Contents"
+        and resolved.parents[2].suffix == ".app"
+    ):
+        return resolved.parents[3] / PACKAGED_MODEL_DIRNAME
+    return resolved.parent / PACKAGED_MODEL_DIRNAME
+
+
 def model_directory() -> Path:
     """Directory that holds the ONNX files when no path was passed in."""
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent / PACKAGED_MODEL_DIRNAME
+        return packaged_model_directory(Path(sys.executable))
     return Path(__file__).resolve().parents[2] / DEV_MODEL_DIRNAME
 
 
