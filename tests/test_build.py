@@ -4,7 +4,25 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from bundle.build import create_dmg, create_zip, macos_archive_name, place_models
+from bundle.build import configure_stdio, create_dmg, create_zip, macos_archive_name, place_models
+
+
+def test_stdio_is_switched_to_utf8(monkeypatch) -> None:
+    calls: list[dict[str, str]] = []
+
+    class Stream:
+        def reconfigure(self, **kwargs: str) -> None:
+            calls.append(kwargs)
+
+    monkeypatch.setattr(sys, "stdout", Stream())
+    monkeypatch.setattr(sys, "stderr", Stream())
+
+    configure_stdio()
+
+    assert calls == [
+        {"encoding": "utf-8", "errors": "replace"},
+        {"encoding": "utf-8", "errors": "replace"},
+    ]
 
 
 def test_macos_archive_name_follows_the_cpu() -> None:

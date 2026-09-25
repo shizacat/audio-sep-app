@@ -18,6 +18,14 @@ APP_NAME = "AudioSep"
 MODEL_FILES = ("separator.onnx", "clap_text.onnx")
 
 
+def configure_stdio() -> None:
+    """Print UTF-8. A Windows console defaults to a code page that rejects Russian."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def macos_archive_name(machine: str | None = None) -> str:
     """Disk image name for the CPU of the Python that runs the build.
 
@@ -162,6 +170,7 @@ def build_linux(root: Path) -> Path:
 
 
 def build(root: Path) -> Path:
+    configure_stdio()
     if sys.platform == "darwin":
         return build_macos(root)
     if sys.platform == "win32":
