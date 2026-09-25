@@ -19,6 +19,10 @@ def test_remove_checkbox_has_a_visible_explanation(qapp: QApplication) -> None:
     hint = window._remove_hint.text()
 
     assert window._remove_hint.isVisible()
+    assert window._remove_hint.height() >= window._remove_hint.heightForWidth(window._remove_hint.width())
+    window.resize(280, 700)
+    qapp.processEvents()
+    assert window._remove_hint.height() >= window._remove_hint.heightForWidth(window._remove_hint.width())
     assert "_separated" in hint
     assert "_without" in hint
     assert "вычитается" in hint

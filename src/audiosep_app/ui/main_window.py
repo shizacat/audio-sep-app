@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPlainTextEdit,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -34,7 +35,7 @@ class MainWindow(QMainWindow):
         self._worker: SeparationWorker | None = None
 
         self.setWindowTitle("AudioSep")
-        self.resize(800, 480)
+        self.resize(800, 640)
 
         hint = QLabel("Укажите запись и звук, который нужно отделить.")
         hint.setWordWrap(True)
@@ -56,6 +57,7 @@ class MainWindow(QMainWindow):
         self._remove_from_original = QCheckBox("Убрать отделённый звук из оригинала")
         self._remove_hint = QLabel(_REMOVE_HINT)
         self._remove_hint.setWordWrap(True)
+        self._remove_hint.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
 
         self._separate_button = QPushButton("Отделить")
         self._separate_button.clicked.connect(self.separate)
@@ -96,6 +98,22 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setLayout(form)
         self.setCentralWidget(central)
+
+    def showEvent(self, event: QShowEvent) -> None:
+        super().showEvent(event)
+        self._fit_remove_hint()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._fit_remove_hint()
+
+    def _fit_remove_hint(self) -> None:
+        width = self._remove_hint.width()
+        if width <= 0:
+            return
+        height = self._remove_hint.heightForWidth(width)
+        if height > 0 and self._remove_hint.minimumHeight() != height:
+            self._remove_hint.setMinimumHeight(height)
 
     def separate(self) -> None:
         audio_path = Path(self._audio_path.text())
