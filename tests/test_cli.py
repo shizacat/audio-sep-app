@@ -45,6 +45,20 @@ def test_model_paths_keep_qt_arguments() -> None:
     assert qt_args == ["-platform", "offscreen"]
 
 
+def test_cpu_flag_defaults_to_off() -> None:
+    args, qt_args = parse_args([])
+
+    assert args.cpu is False
+    assert qt_args == []
+
+
+def test_cpu_flag_keeps_qt_arguments() -> None:
+    args, qt_args = parse_args(["--cpu", "-platform", "offscreen"])
+
+    assert args.cpu is True
+    assert qt_args == ["-platform", "offscreen"]
+
+
 def test_unknown_log_level_exits() -> None:
     with pytest.raises(SystemExit):
         parse_args(["--log-level", "verbose"])

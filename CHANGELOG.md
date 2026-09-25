@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### Добавлено
+
+- Разделение на GPU, если сборка onnxruntime его предоставляет: Core ML на macOS, CUDA или DirectML на Windows, CUDA или ROCm на Linux. Если GPU недоступен, используется CPU. Флаг `--cpu` оставляет только CPU.
+
 ## [1.0.0] - 2026-09-25
 
 ### Изменено

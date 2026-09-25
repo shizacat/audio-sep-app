@@ -31,8 +31,9 @@ def test_runner_saves_separated_audio_and_loads_models_once(tmp_path: Path, monk
     created: list[Path] = []
 
     class FakeSeparator:
-        def __init__(self, separator_path: Path, clap_path: Path) -> None:
+        def __init__(self, separator_path: Path, clap_path: Path, *, cpu: bool = False) -> None:
             created.append(separator_path)
+            assert not cpu
 
         def separate(self, waveform: np.ndarray, text: str) -> np.ndarray:
             assert text == "a child speaking"
@@ -52,3 +53,27 @@ def test_runner_saves_separated_audio_and_loads_models_once(tmp_path: Path, monk
     assert created == [tmp_path / "separator.onnx"]
     assert np.allclose(load_audio(separated_path), waveform * 0.5, atol=1e-5)
     assert np.allclose(load_audio(residual_path), waveform * 0.5, atol=1e-5)
+
+
+def test_cpu_flag_is_passed_to_the_separator(tmp_path: Path, monkeypatch) -> None:
+    seen: list[bool] = []
+
+    class FakeSeparator:
+        def __init__(self, separator_path: Path, clap_path: Path, *, cpu: bool = False) -> None:
+            seen.append(cpu)
+
+        def separate(self, waveform: np.ndarray, text: str) -> np.ndarray:
+            return waveform
+
+    monkeypatch.setattr("audiosep_app.separation.job.OnnxSeparator", FakeSeparator)
+    source = tmp_path / "voice.wav"
+    save_audio(source, np.zeros(1000, dtype=np.float32))
+    task = make_separation_task(
+        tmp_path / "separator.onnx",
+        tmp_path / "clap_text.onnx",
+        cpu=True,
+    )
+
+    task(source, "a child speaking", False)
+
+    assert seen == [True]

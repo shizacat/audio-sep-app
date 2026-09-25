@@ -2,13 +2,21 @@
 
 Load the models once and call ``OnnxSeparator.separate``. The module does not
 read command-line arguments and does not open a window.
+
+The separator uses a GPU provider when this build of ONNX Runtime has one.
+The CLAP text encoder runs once per query and stays on CPU.
 """
 
+import logging
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import numpy as np
+import onnxruntime as ort
+from tokenizers import Tokenizer
+
+logger = logging.getLogger(__name__)
 
 SAMPLE_RATE = 32_000
 CHUNK_SAMPLES = 160_000
@@ -16,6 +24,18 @@ LEFT_SAMPLES = 32_000
 HOP_SAMPLES = 96_000
 RIGHT_SAMPLES = 32_000
 TEXT_LENGTH = 512
+CPU_PROVIDER = "CPUExecutionProvider"
+Provider = str | tuple[str, dict[str, str]]
+
+_COREML_GPU: Provider = (
+    "CoreMLExecutionProvider",
+    {"ModelFormat": "MLProgram", "MLComputeUnits": "CPUAndGPU"},
+)
+_CUDA: Provider = "CUDAExecutionProvider"
+_DIRECTML: Provider = "DmlExecutionProvider"
+_ROCM: Provider = "ROCMExecutionProvider"
+
+
 def tokenizer_path(module_file: Path | None = None) -> Path:
     """Path to the bundled RoBERTa tokenizer.
 
@@ -78,14 +98,76 @@ def separate_chunks(waveform: np.ndarray, predict_window: Callable[[np.ndarray],
     return output
 
 
+def gpu_providers(available: Sequence[str], system: str) -> tuple[Provider, ...]:
+    """GPU providers for this OS, in the order they should be tried.
+
+    macOS uses Core ML. Windows tries CUDA for NVIDIA, then DirectML, which runs
+    on AMD, Intel, and NVIDIA. Linux tries CUDA for NVIDIA, then ROCm for AMD.
+    A provider missing from ``available`` is skipped.
+    """
+    present = set(available)
+    if system == "darwin":
+        candidates: tuple[Provider, ...] = (_COREML_GPU,)
+    elif system == "win32":
+        candidates = (_CUDA, _DIRECTML)
+    else:
+        candidates = (_CUDA, _ROCM)
+    return tuple(provider for provider in candidates if _provider_name(provider) in present)
+
+
+def choose_separator_session[SessionT](
+    model_path: str,
+    *,
+    cpu: bool,
+    available: Sequence[str],
+    system: str,
+    open_session: Callable[[str, Sequence[Provider]], SessionT],
+) -> SessionT:
+    """Open the separator on the first GPU that accepts it, otherwise on CPU."""
+    if not cpu:
+        for provider in gpu_providers(available, system):
+            name = _provider_name(provider)
+            try:
+                session = open_session(model_path, [provider, CPU_PROVIDER])
+            except Exception as exc:  # noqa: BLE001
+                # Device initialization raises different types. The next provider can still run.
+                logger.warning("Separator provider %s failed: %s", name, exc)
+                continue
+            if name in session.get_providers():
+                logger.info("Separator providers: %s", ", ".join(session.get_providers()))
+                return session
+            logger.warning("Separator provider %s did not join the session", name)
+    session = open_session(model_path, [CPU_PROVIDER])
+    logger.info("Separator providers: %s", ", ".join(session.get_providers()))
+    return session
+
+
+def _provider_name(provider: Provider) -> str:
+    if isinstance(provider, tuple):
+        return provider[0]
+    return provider
+
+
+def _open_separator_session(model_path: str, *, cpu: bool) -> object:
+    return choose_separator_session(
+        model_path,
+        cpu=cpu,
+        available=ort.get_available_providers(),
+        system=sys.platform,
+        open_session=lambda path, providers: ort.InferenceSession(path, providers=list(providers)),
+    )
+
+
 class OnnxSeparator:
     """Text-guided separator.
 
     ``waveform`` is one mono channel of float samples at ``SAMPLE_RATE``.
     ``separate`` returns a waveform of the same length.
+    ``cpu`` keeps the separator on CPU. Otherwise a GPU provider is used when
+    this build of ONNX Runtime has one.
     """
 
-    def __init__(self, separator_path: Path, clap_path: Path) -> None:
+    def __init__(self, separator_path: Path, clap_path: Path, *, cpu: bool = False) -> None:
         if not separator_path.is_file():
             raise FileNotFoundError(separator_path)
         if not clap_path.is_file():
@@ -93,14 +175,8 @@ class OnnxSeparator:
         if not TOKENIZER_PATH.is_file():
             raise FileNotFoundError(TOKENIZER_PATH)
 
-        import onnxruntime as ort
-        from tokenizers import Tokenizer
-
-        self._separator = ort.InferenceSession(
-            str(separator_path),
-            providers=["CPUExecutionProvider"],
-        )
-        self._clap = ort.InferenceSession(str(clap_path), providers=["CPUExecutionProvider"])
+        self._separator = _open_separator_session(str(separator_path), cpu=cpu)
+        self._clap = ort.InferenceSession(str(clap_path), providers=[CPU_PROVIDER])
         tokenizer = Tokenizer.from_file(str(TOKENIZER_PATH))
         tokenizer.enable_truncation(max_length=TEXT_LENGTH)
         tokenizer.enable_padding(length=TEXT_LENGTH, pad_id=_PAD_TOKEN_ID, pad_token="<pad>")

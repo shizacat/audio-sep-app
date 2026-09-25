@@ -29,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=f"файл текстовой модели (по умолчанию {default_clap_path()})",
     )
+    parser.add_argument(
+        "--cpu",
+        action="store_true",
+        help="разделять только на CPU",
+    )
     return parser
 
 

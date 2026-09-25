@@ -23,8 +23,15 @@ _AUDIO_MESSAGES = {
 class SeparationRunner:
     """Load the models on the first call and reuse them after that."""
 
-    def __init__(self, separator_path: Path | None, clap_path: Path | None) -> None:
+    def __init__(
+        self,
+        separator_path: Path | None,
+        clap_path: Path | None,
+        *,
+        cpu: bool = False,
+    ) -> None:
         self._separator_path, self._clap_path = resolved_model_paths(separator_path, clap_path)
+        self._cpu = cpu
         self._separator: OnnxSeparator | None = None
 
     def __call__(self, audio_path: Path, query: str, remove_from_original: bool) -> None:
@@ -51,12 +58,18 @@ class SeparationRunner:
     def _engine(self) -> OnnxSeparator:
         if self._separator is None:
             logger.info("Loading models %s and %s", self._separator_path, self._clap_path)
-            self._separator = OnnxSeparator(self._separator_path, self._clap_path)
+            self._separator = OnnxSeparator(
+                self._separator_path,
+                self._clap_path,
+                cpu=self._cpu,
+            )
         return self._separator
 
 
 def make_separation_task(
     separator_path: Path | None = None,
     clap_path: Path | None = None,
+    *,
+    cpu: bool = False,
 ) -> SeparationTask:
-    return SeparationRunner(separator_path, clap_path)
+    return SeparationRunner(separator_path, clap_path, cpu=cpu)
