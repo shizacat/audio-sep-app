@@ -14,3 +14,4 @@ build/
 *.ckpt
 checkpoint/
 local/
+tmp/
