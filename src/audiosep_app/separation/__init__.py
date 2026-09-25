@@ -1,1 +1,1 @@
-"""Sound-separation adapter. AudioSep is not wired to a directory outside this repository."""
+"""Sound-separation adapter. ONNX models are loaded from the application model directory."""

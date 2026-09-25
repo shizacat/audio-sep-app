@@ -1,16 +1,14 @@
 """Background separation so the window stays responsive."""
 
 import logging
-from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
 from audiosep_app.separation.errors import SeparationError
+from audiosep_app.separation.job import SeparationTask
 
 logger = logging.getLogger(__name__)
-
-SeparationTask = Callable[[Path, str, Path], None]
 
 
 class SeparationWorker(QThread):

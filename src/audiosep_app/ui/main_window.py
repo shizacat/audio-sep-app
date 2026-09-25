@@ -14,10 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from audiosep_app.formats import AUDIO_FILTER, AUDIO_SUFFIXES
 from audiosep_app.ui.worker import SeparationTask, SeparationWorker
-
-AUDIO_SUFFIXES = {".mp3", ".wav", ".ogg"}
-AUDIO_FILTER = "Аудиофайл (*.mp3 *.wav *.ogg)"
 
 
 class MainWindow(QMainWindow):

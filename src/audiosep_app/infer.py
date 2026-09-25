@@ -15,6 +15,8 @@ LEFT_SAMPLES = 32_000
 HOP_SAMPLES = 96_000
 RIGHT_SAMPLES = 32_000
 TEXT_LENGTH = 512
+TOKENIZER_PATH = Path(__file__).resolve().parent / "assets" / "tokenizer.json"
+_PAD_TOKEN_ID = 1
 
 
 def separate_chunks(waveform: np.ndarray, predict_window: Callable[[np.ndarray], np.ndarray]) -> np.ndarray:
@@ -65,34 +67,33 @@ class OnnxSeparator:
     """
 
     def __init__(self, separator_path: Path, clap_path: Path) -> None:
-        import onnxruntime as ort
-        from transformers import RobertaTokenizer
-
         if not separator_path.is_file():
             raise FileNotFoundError(separator_path)
         if not clap_path.is_file():
             raise FileNotFoundError(clap_path)
+        if not TOKENIZER_PATH.is_file():
+            raise FileNotFoundError(TOKENIZER_PATH)
+
+        import onnxruntime as ort
+        from tokenizers import Tokenizer
 
         self._separator = ort.InferenceSession(
             str(separator_path),
             providers=["CPUExecutionProvider"],
         )
         self._clap = ort.InferenceSession(str(clap_path), providers=["CPUExecutionProvider"])
-        self._tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+        tokenizer = Tokenizer.from_file(str(TOKENIZER_PATH))
+        tokenizer.enable_truncation(max_length=TEXT_LENGTH)
+        tokenizer.enable_padding(length=TEXT_LENGTH, pad_id=_PAD_TOKEN_ID, pad_token="<pad>")
+        self._tokenizer = tokenizer
 
     def embed_text(self, text: str) -> np.ndarray:
-        tokens = self._tokenizer(
-            text,
-            padding="max_length",
-            truncation=True,
-            max_length=TEXT_LENGTH,
-            return_tensors="np",
-        )
+        encoded = self._tokenizer.encode(text)
         (embedding,) = self._clap.run(
             None,
             {
-                "input_ids": tokens["input_ids"].astype(np.int64),
-                "attention_mask": tokens["attention_mask"].astype(np.int64),
+                "input_ids": np.asarray([encoded.ids], dtype=np.int64),
+                "attention_mask": np.asarray([encoded.attention_mask], dtype=np.int64),
             },
         )
         embedding = np.asarray(embedding, dtype=np.float32)

@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -16,6 +17,31 @@ def test_log_level_accepts_debug_and_keeps_qt_arguments() -> None:
     args, qt_args = parse_args(["--log-level", "debug", "-platform", "offscreen"])
 
     assert args.log_level == "debug"
+    assert qt_args == ["-platform", "offscreen"]
+
+
+def test_model_paths_default_to_none() -> None:
+    args, qt_args = parse_args([])
+
+    assert args.separator is None
+    assert args.clap is None
+    assert qt_args == []
+
+
+def test_model_paths_keep_qt_arguments() -> None:
+    args, qt_args = parse_args(
+        [
+            "--separator",
+            "models/separator.onnx",
+            "--clap",
+            "models/clap_text.onnx",
+            "-platform",
+            "offscreen",
+        ]
+    )
+
+    assert args.separator == Path("models/separator.onnx")
+    assert args.clap == Path("models/clap_text.onnx")
     assert qt_args == ["-platform", "offscreen"]
 
 

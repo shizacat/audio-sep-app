@@ -5,7 +5,13 @@ description = "Desktop app for text-guided sound separation with AudioSep"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "lameenc>=1.8.4",
+    "miniaudio>=1.71",
+    "numpy>=2.5.3",
+    "onnxruntime>=1.30.0",
     "PySide6>=6.6",
+    "soundfile>=0.14.0",
+    "tokenizers>=0.23.2",
 ]
 
 [project.scripts]
@@ -24,6 +30,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/audiosep_app/__init__.py"
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/audiosep_app/assets/tokenizer.json" = "audiosep_app/assets/tokenizer.json"
 
 [tool.ruff]
 target-version = "py312"

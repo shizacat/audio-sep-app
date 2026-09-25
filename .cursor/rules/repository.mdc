@@ -6,8 +6,8 @@ alwaysApply: true
 # Структура
 
 - `src/audiosep_app/ui/` — виджеты PySide6.
-- `src/audiosep_app/separation/` — вызов AudioSep.
 - `src/audiosep_app/infer.py` — библиотека прогона ONNX-моделей, без командной строки и окна.
+- `src/audiosep_app/separation/` — чтение аудиофайла, вызов этой библиотеки и запись результата.
 - `tests/` — pytest, без скачивания весов.
 - `script/` — отдельный экспорт модели в ONNX, не код приложения.
 - `docs/development.md` — требования к разработке.
@@ -16,7 +16,7 @@ alwaysApply: true
 
 Файл настроек приложения пока не выбран. Код его не читает.
 
-Веса `.ckpt`, каталог `checkpoint/` и записи из `local/` в git не попадают.
+Веса `.ckpt`, каталог `checkpoint/` и записи из `local/` в git не попадают. При разработке приложение читает `separator.onnx` и `clap_text.onnx` из `local/`. У собранного приложения те же файлы лежат в каталоге `models` рядом с исполняемым файлом. Другой путь задаётся аргументами `--separator` и `--clap`.
 
 Структура репозитория описана здесь. README её не повторяет.
 
