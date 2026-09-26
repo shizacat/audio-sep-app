@@ -31,6 +31,17 @@ def test_mp3_and_ogg_roundtrip(tmp_path) -> None:
         assert float(np.max(np.abs(loaded))) > 0.05
 
 
+def test_non_latin_path_roundtrips(tmp_path) -> None:
+    waveform = _tone(SAMPLE_RATE)
+    path = tmp_path / "Звуки" / "Голос 1.wav"
+    path.parent.mkdir()
+    save_audio(path, waveform)
+
+    loaded = load_audio(path)
+
+    assert np.allclose(loaded, waveform, atol=1e-6)
+
+
 def test_unsupported_suffix_is_rejected(tmp_path) -> None:
     path = tmp_path / "tone.flac"
 

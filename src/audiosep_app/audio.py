@@ -25,13 +25,15 @@ def load_audio(path: Path) -> np.ndarray:
     if path.suffix.lower() not in AUDIO_SUFFIXES:
         raise AudioFormatError("read")
     try:
-        decoded = miniaudio.decode_file(
-            str(path),
+        # Python opens the path with the Unicode file API. miniaudio's own opener
+        # takes a narrow string and fails on Windows when the path is not Latin.
+        decoded = miniaudio.decode(
+            path.read_bytes(),
             output_format=miniaudio.SampleFormat.FLOAT32,
             nchannels=1,
             sample_rate=SAMPLE_RATE,
         )
-    except miniaudio.DecodeError as exc:
+    except (OSError, miniaudio.DecodeError) as exc:
         raise AudioFormatError("read") from exc
     waveform = np.array(decoded.samples, dtype=np.float32, copy=True).reshape(-1)
     if waveform.size == 0:
