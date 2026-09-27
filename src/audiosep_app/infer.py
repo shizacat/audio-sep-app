@@ -115,6 +115,11 @@ def gpu_providers(available: Sequence[str], system: str) -> tuple[Provider, ...]
     return tuple(provider for provider in candidates if _provider_name(provider) in present)
 
 
+def uses_gpu(providers: Sequence[str]) -> bool:
+    """True when the session's provider list contains a GPU execution provider."""
+    return any(provider != CPU_PROVIDER for provider in providers)
+
+
 def choose_separator_session[SessionT](
     model_path: str,
     *,
@@ -181,6 +186,11 @@ class OnnxSeparator:
         tokenizer.enable_truncation(max_length=TEXT_LENGTH)
         tokenizer.enable_padding(length=TEXT_LENGTH, pad_id=_PAD_TOKEN_ID, pad_token="<pad>")
         self._tokenizer = tokenizer
+
+    @property
+    def gpu(self) -> bool:
+        """Whether the separator session is running on a GPU provider."""
+        return uses_gpu(self._separator.get_providers())
 
     def embed_text(self, text: str) -> np.ndarray:
         encoded = self._tokenizer.encode(text)

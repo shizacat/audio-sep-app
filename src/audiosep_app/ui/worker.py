@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SeparationWorker(QThread):
+    device_ready = Signal(bool)
     finished_ok = Signal(str, float)
     failed = Signal(str)
 
@@ -31,6 +32,9 @@ class SeparationWorker(QThread):
         self._remove_from_original = remove_from_original
 
     def run(self) -> None:
+        bind = getattr(self._task, "set_device_listener", None)
+        if bind is not None:
+            bind(self.device_ready.emit)
         started = time.perf_counter()
         try:
             self._task(self._audio_path, self._query, self._remove_from_original)

@@ -33,6 +33,14 @@ class SeparationRunner:
         self._separator_path, self._clap_path = resolved_model_paths(separator_path, clap_path)
         self._cpu = cpu
         self._separator: OnnxSeparator | None = None
+        self.gpu: bool | None = None
+        self._device_listener: Callable[[bool], None] | None = None
+
+    def set_device_listener(self, listener: Callable[[bool], None]) -> None:
+        """Report the separator device. Called again immediately if it is already known."""
+        self._device_listener = listener
+        if self.gpu is not None:
+            listener(self.gpu)
 
     def __call__(self, audio_path: Path, query: str, remove_from_original: bool) -> None:
         separated_path, residual_path = result_paths(audio_path, remove_from_original)
@@ -44,8 +52,9 @@ class SeparationRunner:
             residual_path,
         )
         try:
+            engine = self._engine()
             waveform = load_audio(audio_path)
-            separated = self._engine().separate(waveform, query)
+            separated = engine.separate(waveform, query)
             save_audio(separated_path, separated)
             if residual_path is not None:
                 save_audio(residual_path, subtract_extracted(waveform, separated))
@@ -63,6 +72,9 @@ class SeparationRunner:
                 self._clap_path,
                 cpu=self._cpu,
             )
+            self.gpu = getattr(self._separator, "gpu", None)
+            if self.gpu is not None and self._device_listener is not None:
+                self._device_listener(self.gpu)
         return self._separator
 
 

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from audiosep_app.formats import result_paths
 from audiosep_app.separation.errors import SeparationError
-from audiosep_app.ui.main_window import MainWindow, format_elapsed
+from audiosep_app.ui.main_window import MainWindow, device_status, format_elapsed
 from audiosep_app.ui.worker import SeparationTask
 
 
@@ -91,7 +91,7 @@ def test_success_shows_result_path(qapp: QApplication, tmp_path: Path) -> None:
     assert window._result_path.toPlainText() == str(separated)
     assert window._message.text().startswith("Результат сохранён за ")
     assert window._message.text().endswith(".")
-    assert window.statusBar().currentMessage() == window._message.text()
+    assert window._status_message.text() == window._message.text()
     assert separated.read_bytes() == b"separated"
 
 
@@ -181,6 +181,49 @@ def test_checkbox_saves_both_files_with_suffixes(qapp: QApplication, tmp_path: P
     assert residual.name == "voice_without.wav"
     assert separated.read_bytes() == b"separated"
     assert residual.read_bytes() == b"without"
+
+
+def test_device_status_names_cpu_or_gpu() -> None:
+    assert device_status(None) == "Нейросеть: —"
+    assert device_status(True) == "Нейросеть: GPU"
+    assert device_status(False) == "Нейросеть: CPU"
+
+
+def test_status_bar_shows_the_separator_device_while_separation_runs(
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "voice.wav"
+    source.write_bytes(b"")
+    started = threading.Event()
+    release = threading.Event()
+
+    class Task:
+        def set_device_listener(self, listener) -> None:
+            self._listener = listener
+
+        def __call__(self, audio_path: Path, query: str, remove_from_original: bool) -> None:
+            self._listener(True)
+            started.set()
+            assert release.wait(3)
+
+    window = MainWindow(Task())
+    window._audio_path.setText(str(source))
+    window._query.setPlainText("речь")
+    assert window._device_label.text() == "Нейросеть: —"
+
+    window.separate()
+    assert started.wait(3)
+    qapp.processEvents()
+
+    assert window._device_label.text() == "Нейросеть: GPU"
+    assert window._status_message.text() == "Отделение звука…"
+    assert not window._separate_button.isEnabled()
+
+    release.set()
+    assert window._worker is not None
+    assert window._worker.wait(3000)
+    qapp.processEvents()
 
 
 def test_elapsed_time_uses_a_comma_and_larger_units() -> None:

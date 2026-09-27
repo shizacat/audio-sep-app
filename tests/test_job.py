@@ -18,13 +18,50 @@ def test_missing_model_is_reported(tmp_path: Path) -> None:
         task(source, "a child speaking", False)
 
 
-def test_unreadable_audio_is_reported(tmp_path: Path) -> None:
+def test_unreadable_audio_is_reported(tmp_path: Path, monkeypatch) -> None:
+    class FakeSeparator:
+        gpu = False
+
+        def __init__(self, separator_path: Path, clap_path: Path, *, cpu: bool = False) -> None:
+            return
+
+        def separate(self, waveform: np.ndarray, text: str) -> np.ndarray:
+            return waveform
+
+    monkeypatch.setattr("audiosep_app.separation.job.OnnxSeparator", FakeSeparator)
     source = tmp_path / "voice.wav"
     source.write_bytes(b"not a wav")
     task = make_separation_task(tmp_path / "separator.onnx", tmp_path / "clap_text.onnx")
 
     with pytest.raises(SeparationError, match="Не удалось прочитать аудиофайл"):
         task(source, "a child speaking", False)
+
+
+def test_device_is_reported_as_soon_as_the_model_opens(tmp_path: Path, monkeypatch) -> None:
+    order: list[object] = []
+
+    class FakeSeparator:
+        gpu = True
+
+        def __init__(self, separator_path: Path, clap_path: Path, *, cpu: bool = False) -> None:
+            order.append("open")
+
+        def separate(self, waveform: np.ndarray, text: str) -> np.ndarray:
+            order.append("separate")
+            return waveform
+
+    monkeypatch.setattr("audiosep_app.separation.job.OnnxSeparator", FakeSeparator)
+    source = tmp_path / "voice.wav"
+    save_audio(source, np.zeros(1000, dtype=np.float32))
+    task = make_separation_task(tmp_path / "separator.onnx", tmp_path / "clap_text.onnx")
+    task.set_device_listener(lambda gpu: order.append(("device", gpu)))
+
+    task(source, "a child speaking", False)
+
+    assert order == ["open", ("device", True), "separate"]
+    again: list[bool] = []
+    task.set_device_listener(again.append)
+    assert again == [True]
 
 
 def test_runner_saves_separated_audio_and_loads_models_once(tmp_path: Path, monkeypatch) -> None:

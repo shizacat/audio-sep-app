@@ -28,6 +28,15 @@ _REMOVE_HINT = (
 )
 
 
+def device_status(gpu: bool | None) -> str:
+    """Status-bar text for the separator device. Unknown stays a dash."""
+    if gpu is None:
+        return "Нейросеть: —"
+    if gpu:
+        return "Нейросеть: GPU"
+    return "Нейросеть: CPU"
+
+
 def format_elapsed(seconds: float) -> str:
     """Duration shown after a finished separation."""
     if seconds < 60:
@@ -110,6 +119,10 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setLayout(form)
         self.setCentralWidget(central)
+        self._status_message = QLabel()
+        self._device_label = QLabel(device_status(None))
+        self.statusBar().addWidget(self._status_message, 1)
+        self.statusBar().addPermanentWidget(self._device_label)
 
     def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
@@ -156,6 +169,7 @@ class MainWindow(QMainWindow):
             query,
             remove_from_original,
         )
+        worker.device_ready.connect(self._show_device)
         worker.finished_ok.connect(self._on_separated)
         worker.failed.connect(self._on_failed)
         worker.finished.connect(self._on_worker_finished)
@@ -201,9 +215,12 @@ class MainWindow(QMainWindow):
             return audio_path.parent
         return None
 
+    def _show_device(self, gpu: bool) -> None:
+        self._device_label.setText(device_status(gpu))
+
     def _show_message(self, text: str) -> None:
         self._message.setText(text)
-        self.statusBar().showMessage(text)
+        self._status_message.setText(text)
 
     @staticmethod
     def _is_audio_file(path: Path) -> bool:

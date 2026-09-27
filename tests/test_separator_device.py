@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 import pytest
 
-from audiosep_app.infer import Provider, choose_separator_session, gpu_providers
+from audiosep_app.infer import Provider, choose_separator_session, gpu_providers, uses_gpu
 
 
 class _Session:
@@ -76,6 +76,7 @@ def test_cpu_flag_skips_an_available_gpu() -> None:
     )
 
     assert session.get_providers() == ["CPUExecutionProvider"]
+    assert uses_gpu(session.get_providers()) is False
     assert opened == [["CPUExecutionProvider"]]
 
 
@@ -94,6 +95,7 @@ def test_failed_cuda_falls_back_to_directml() -> None:
     )
 
     assert session.get_providers() == ["DmlExecutionProvider", "CPUExecutionProvider"]
+    assert uses_gpu(session.get_providers()) is True
 
 
 def test_provider_that_drops_out_tries_rocm() -> None:
@@ -112,6 +114,7 @@ def test_provider_that_drops_out_tries_rocm() -> None:
     )
 
     assert session.get_providers()[0] == "ROCMExecutionProvider"
+    assert uses_gpu(session.get_providers()) is True
 
 
 def test_every_gpu_failure_ends_on_cpu() -> None:
@@ -129,6 +132,7 @@ def test_every_gpu_failure_ends_on_cpu() -> None:
     )
 
     assert session.get_providers() == ["CPUExecutionProvider"]
+    assert uses_gpu(session.get_providers()) is False
 
 
 def test_cpu_failure_is_not_hidden() -> None:
