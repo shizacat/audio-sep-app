@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -28,6 +28,9 @@ _REMOVE_HINT = (
 )
 
 
+_FIELD_INSET = 8
+
+
 def device_status(gpu: bool | None) -> str:
     """Status-bar text for the separator device. Unknown stays a dash."""
     if gpu is None:
@@ -35,6 +38,16 @@ def device_status(gpu: bool | None) -> str:
     if gpu:
         return "Нейросеть: GPU"
     return "Нейросеть: CPU"
+
+
+def _pad_line(edit: QLineEdit) -> None:
+    """Keep the path clear of the frame and give the row a little height."""
+    edit.setTextMargins(_FIELD_INSET, 0, _FIELD_INSET, 0)
+    edit.setMinimumHeight(edit.sizeHint().height() + 6)
+
+
+def _pad_plain(edit: QPlainTextEdit) -> None:
+    edit.document().setDocumentMargin(_FIELD_INSET)
 
 
 def format_elapsed(seconds: float) -> str:
@@ -64,16 +77,21 @@ class MainWindow(QMainWindow):
         self._audio_path = QLineEdit()
         self._audio_path.setReadOnly(True)
         self._audio_path.setPlaceholderText("Файл не выбран")
+        _pad_line(self._audio_path)
         self._browse = QPushButton("Обзор…")
+        self._browse.setMinimumHeight(self._audio_path.minimumHeight())
         self._browse.clicked.connect(self._browse_audio)
 
         audio_row = QHBoxLayout()
+        audio_row.setSpacing(_FIELD_INSET)
+        audio_row.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         audio_row.addWidget(self._audio_path)
         audio_row.addWidget(self._browse)
 
         self._query = QPlainTextEdit()
         self._query.setPlaceholderText("Например, детский голос")
-        self._query.setFixedHeight(96)
+        self._query.setFixedHeight(104)
+        _pad_plain(self._query)
 
         self._remove_from_original = QCheckBox("Убрать отделённый звук из оригинала")
         self._remove_hint = QLabel(_REMOVE_HINT)
@@ -95,7 +113,8 @@ class MainWindow(QMainWindow):
         self._result_path = QPlainTextEdit()
         self._result_path.setReadOnly(True)
         self._result_path.setPlaceholderText("Появится здесь после отделения")
-        self._result_path.setFixedHeight(64)
+        self._result_path.setFixedHeight(80)
+        _pad_plain(self._result_path)
 
         self._message = QLabel()
         self._message.setWordWrap(True)

@@ -28,6 +28,17 @@ def test_remove_checkbox_has_a_visible_explanation(qapp: QApplication) -> None:
     assert "вычитается" in hint
 
 
+def test_path_field_keeps_text_clear_of_the_frame(qapp: QApplication) -> None:
+    window = MainWindow(_unused)
+    margins = window._audio_path.textMargins()
+
+    assert margins.left() >= 8
+    assert margins.right() >= 8
+    assert window._audio_path.minimumHeight() > window._audio_path.sizeHint().height()
+    assert window._query.document().documentMargin() >= 8
+    assert window._result_path.document().documentMargin() >= 8
+
+
 def test_window_asks_for_an_audio_file(qapp: QApplication) -> None:
     window = MainWindow(_unused)
 
