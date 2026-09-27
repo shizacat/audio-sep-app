@@ -18,7 +18,7 @@ alwaysApply: true
 
 Файл настроек приложения пока не выбран. Код его не читает.
 
-Веса `.ckpt`, каталог `checkpoint/` и записи из `local/` в git не попадают. При разработке приложение читает `separator.onnx` и `clap_text.onnx` из `local/`. У собранного приложения те же файлы лежат в каталоге `models` рядом с исполняемым файлом: на macOS внутри `AudioSep.app`, на Windows рядом с `AudioSep.exe`, на Linux рядом с `AudioSep`. Другой путь задаётся аргументами `--separator` и `--clap`.
+Веса `.ckpt`, каталог `checkpoint/` и записи из `local/` в git не попадают. При разработке приложение читает `separator.onnx` и `clap_text.onnx` из `local/`. У собранного приложения те же файлы лежат в каталоге `models` рядом с исполняемым файлом на Windows и Linux. На macOS он внутри `AudioSep.app`, в `Contents/Resources`. Другой путь задаётся аргументами `--separator` и `--clap`.
 
 Структура репозитория описана здесь. README её не повторяет.
 

@@ -19,7 +19,7 @@ def test_packaged_macos_models_live_inside_the_app(tmp_path: Path, monkeypatch) 
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(executable))
 
-    models = executable.parent / "models"
+    models = executable.parent.parent / "Resources" / "models"
     assert model_directory() == models
     assert default_separator_path() == models / "separator.onnx"
     assert default_clap_path() == models / "clap_text.onnx"

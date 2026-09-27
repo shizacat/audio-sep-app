@@ -10,12 +10,19 @@ DEV_MODEL_DIRNAME = "local"
 
 
 def packaged_model_directory(executable: Path) -> Path:
-    """Directory of ONNX files shipped next to the frozen executable.
+    """Directory of ONNX files shipped with the frozen executable.
 
-    On macOS that is inside the ``.app``. Gatekeeper runs a downloaded app from
-    a temporary copy and does not take files that sit beside the bundle.
+    On macOS the files are in ``Contents/Resources/models``, inside the bundle.
+    Gatekeeper runs a downloaded app from a temporary copy and does not take
+    files that sit beside the bundle. ``Contents/MacOS`` is reserved for code:
+    model files placed there break the signature, and macOS then refuses to
+    open the app.
     """
-    return executable.resolve().parent / PACKAGED_MODEL_DIRNAME
+    executable = executable.resolve()
+    contents = executable.parent.parent
+    if executable.parent.name == "MacOS" and contents.name == "Contents":
+        return contents / "Resources" / PACKAGED_MODEL_DIRNAME
+    return executable.parent / PACKAGED_MODEL_DIRNAME
 
 
 def model_directory() -> Path:

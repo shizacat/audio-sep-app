@@ -76,6 +76,18 @@ def test_dmg_contains_the_app_and_applications_link(tmp_path: Path) -> None:
     macos = app / "Contents" / "MacOS"
     macos.mkdir(parents=True)
     (macos / "AudioSep").write_text("bin", encoding="utf-8")
+    (app / "Contents" / "Info.plist").write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>AudioSep</string>
+<key>CFBundleIdentifier</key><string>app.audiosep.test</string>
+<key>CFBundleName</key><string>AudioSep</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+</dict></plist>
+""",
+        encoding="utf-8",
+    )
     models = tmp_path / "local"
     models.mkdir()
     (models / "separator.onnx").write_bytes(b"separator")
@@ -102,9 +114,14 @@ def test_dmg_contains_the_app_and_applications_link(tmp_path: Path) -> None:
         bundled = mount / "AudioSep.app" / "Contents" / "MacOS" / "AudioSep"
         assert bundled.read_text(encoding="utf-8") == "bin"
         assert not (mount / "models").exists()
-        macos_models = mount / "AudioSep.app" / "Contents" / "MacOS" / "models"
+        macos_models = mount / "AudioSep.app" / "Contents" / "Resources" / "models"
         assert (macos_models / "separator.onnx").read_bytes() == b"separator"
         assert (macos_models / "clap_text.onnx").read_bytes() == b"clap"
+        assert not (mount / "AudioSep.app" / "Contents" / "MacOS" / "models").exists()
+        subprocess.run(
+            ["codesign", "--verify", "--strict", str(mount / "AudioSep.app")],
+            check=True,
+        )
         assert (mount / "Applications").is_symlink()
         assert (mount / "Applications").readlink() == Path("/Applications")
     finally:

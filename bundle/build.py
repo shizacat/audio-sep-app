@@ -77,11 +77,21 @@ def require_models(models_dir: Path) -> None:
         raise SystemExit(f"В пакет нечего положить: нет {joined} в {models_dir}")
 
 
+def sign_macos_app(app: Path) -> None:
+    """Ad-hoc sign the bundle after the models are inside it.
+
+    PyInstaller signs the app first. Files added afterwards are not in that
+    seal. macOS then tells the user the downloaded program is not supported.
+    """
+    subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
+
+
 def create_dmg(app: Path, destination: Path, models_dir: Path) -> Path:
     """Write a disk image with the app and a link to /Applications.
 
-    Models go inside the ``.app``, next to the executable. A sibling ``models``
-    folder is left behind when macOS translocates the bundle.
+    Models go in ``Contents/Resources`` so they travel with the bundle and
+    stay part of the signature. A sibling ``models`` folder is left behind
+    when macOS translocates the bundle.
     """
     if not app.is_dir():
         raise SystemExit(f"Приложение не найдено: {app}")
@@ -91,7 +101,8 @@ def create_dmg(app: Path, destination: Path, models_dir: Path) -> Path:
         stage = Path(raw_stage)
         staged_app = stage / app.name
         subprocess.run(["ditto", str(app), str(staged_app)], check=True)
-        place_models(staged_app / "Contents" / "MacOS" / "models", models_dir)
+        place_models(staged_app / "Contents" / "Resources" / "models", models_dir)
+        sign_macos_app(staged_app)
         (stage / "Applications").symlink_to("/Applications")
         if destination.exists():
             destination.unlink()
